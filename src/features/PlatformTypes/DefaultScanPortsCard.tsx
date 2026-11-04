@@ -14,7 +14,7 @@ import useDeleteDefaultScanPort from "@/generated/edge-administration/hooks/netw
  * default port, and kept in sync whenever a new service type is created with one - but also
  * directly editable here, independent of any single service type.
  */
-export default function DefaultScanPortsCard() {
+export default function DefaultScanPortsCard({ canWrite = true }: { canWrite?: boolean }) {
   const portsQuery = useGetDefaultScanPorts();
   const { postDefaultScanPort, isPending: isAdding } = usePostDefaultScanPort();
   const { deleteDefaultScanPort } = useDeleteDefaultScanPort();
@@ -23,6 +23,7 @@ export default function DefaultScanPortsCard() {
   const ports = portsQuery.data ?? [];
 
   const addPort = async () => {
+    if (!canWrite) return;
     const port = Number(portInput);
     if (!Number.isInteger(port) || port < 1 || port > 65535) {
       toast.error("Enter a valid port (1-65535)");
@@ -38,6 +39,7 @@ export default function DefaultScanPortsCard() {
   };
 
   const removePort = async (port: number) => {
+    if (!canWrite) return;
     await deleteDefaultScanPort(port);
     await portsQuery.refetch();
   };
@@ -55,6 +57,7 @@ export default function DefaultScanPortsCard() {
       <div className="flex gap-2">
         <input
           type="number"
+          disabled={!canWrite}
           value={portInput}
           onChange={(e) => setPortInput(e.target.value)}
           onKeyDown={(e) => {
@@ -66,7 +69,7 @@ export default function DefaultScanPortsCard() {
           placeholder="e.g. 502"
           className={`${inputClass} h-9 max-w-40`}
         />
-        <Button type="button" variant="outline" onClick={addPort} disabled={isAdding} className="shrink-0">
+        <Button type="button" variant="outline" onClick={addPort} disabled={!canWrite || isAdding} className="shrink-0">
           <Plus />
         </Button>
       </div>
@@ -80,7 +83,7 @@ export default function DefaultScanPortsCard() {
           {ports.map((port) => (
             <Badge key={port} variant="secondary" className="gap-1">
               {port}
-              <button type="button" onClick={() => removePort(port)}>
+              <button type="button" onClick={() => removePort(port)} disabled={!canWrite}>
                 <X className="w-3 h-3" />
               </button>
             </Badge>

@@ -18,6 +18,8 @@ import { usePostServiceType } from "@/generated/edge-administration/hooks/servic
 import { useUpdateServiceType } from "@/generated/edge-administration/hooks/service_types/useUpdateServiceType";
 import { useDeleteServiceType } from "@/generated/edge-administration/hooks/service_types/useDeleteServiceType";
 import { listRegisteredBrowsers } from "@/lib/browserRegistry";
+import { usePermissions } from "@/features/authorization/permissions/use-permissions";
+import { PERMISSION_KEYS } from "@/features/authorization/permissions/permission-keys";
 import {
   ENDPOINT_ROLE_OPTIONS,
   ENDPOINT_TYPE_DEFAULT_FIELDS,
@@ -29,6 +31,12 @@ import {
 
 export default function PlatformTypesSettings() {
   const user = useOutletUser();
+  const { hasPermission: canReadEndpointTypes } = usePermissions({
+    permissionKey: PERMISSION_KEYS.DEVICE_ENDPOINT_READ,
+  });
+  const { hasPermission: canWriteEndpointTypes } = usePermissions({
+    permissionKey: PERMISSION_KEYS.DEVICE_ENDPOINT_WRITE,
+  });
   const deviceTypesQuery = useGetDeviceTypes();
   const { postDeviceType } = usePostDeviceType();
   const { updateDeviceType } = useUpdateDeviceType();
@@ -84,8 +92,9 @@ export default function PlatformTypesSettings() {
 
         <DeviceTableColumnsCard />
 
-        <TypesManager
+        {canReadEndpointTypes && <TypesManager
           title="Endpoint Types"
+          canWrite={canWriteEndpointTypes}
           singularLabel="Endpoint Type"
           description="Types available when creating endpoints on a device."
           types={endpointTypesQuery.data ?? []}
@@ -107,10 +116,11 @@ export default function PlatformTypesSettings() {
             await deleteEndpointType(typeId, true);
             await endpointTypesQuery.refetch();
           }}
-        />
+        />}
 
-        <TypesManager
+        {canReadEndpointTypes && <TypesManager
           title="Service Types"
+          canWrite={canWriteEndpointTypes}
           singularLabel="Service Type"
           description="Types available when creating services on an endpoint."
           types={serviceTypesQuery.data ?? []}
@@ -132,9 +142,9 @@ export default function PlatformTypesSettings() {
             await deleteServiceType(typeId, true);
             await serviceTypesQuery.refetch();
           }}
-        />
+        />}
 
-        <DefaultScanPortsCard />
+        <DefaultScanPortsCard canWrite={canWriteEndpointTypes} />
 
         {/* Extensions contribute their own platform-configuration cards here (e.g. fields they need). */}
         <ExtensionOutlet target="global" placement="section" context={{ user }} />

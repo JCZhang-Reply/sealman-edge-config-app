@@ -5,6 +5,57 @@ import TypesManager from "../TypesManager";
 import { ENDPOINT_ROLE_OPTIONS, ENDPOINT_TYPE_DEFAULT_FIELDS, ENDPOINT_TYPE_DEFAULT_MAPPING } from "../typeRoles";
 
 describe("TypesManager mapping", () => {
+  it.each(["Edit Test", "Delete Test"])("closes the %s dialog when permission is lost", async (action) => {
+    const props = {
+      title: "Endpoint Types",
+      singularLabel: "Endpoint Type",
+      types: [{ type_id: "test", label: "Test", description: null, fields: {} }],
+      isLoading: false,
+      onCreate: vi.fn(),
+      onUpdate: vi.fn(),
+      onDelete: vi.fn(),
+    };
+    const { rerender } = render(<TypesManager {...props} canWrite />);
+    await userEvent.click(screen.getByRole("button", { name: action }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    rerender(<TypesManager {...props} canWrite={false} />);
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    for (const button of screen.getAllByRole("button")) {
+      expect(button).toBeDisabled();
+    }
+    expect(props.onUpdate).not.toHaveBeenCalled();
+    expect(props.onDelete).not.toHaveBeenCalled();
+  });
+
+  it.each(["Endpoint", "Service"])("disables all %s Type actions without write permission", async (kind) => {
+    const onCreate = vi.fn();
+    const onUpdate = vi.fn();
+    const onDelete = vi.fn();
+    render(
+      <TypesManager
+        title={`${kind} Types`}
+        singularLabel={`${kind} Type`}
+        types={[{ type_id: "test", label: "Test", description: null, fields: {} }]}
+        isLoading={false}
+        canWrite={false}
+        onCreate={onCreate}
+        onUpdate={onUpdate}
+        onDelete={onDelete}
+      />
+    );
+
+    for (const button of screen.getAllByRole("button")) {
+      expect(button).toBeDisabled();
+      await userEvent.click(button);
+    }
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(onCreate).not.toHaveBeenCalled();
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
   it("sends mapping on create when roleOptions are set", async () => {
     const onCreate = vi.fn().mockResolvedValue(undefined);
     render(

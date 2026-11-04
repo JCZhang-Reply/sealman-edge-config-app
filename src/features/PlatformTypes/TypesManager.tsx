@@ -17,6 +17,7 @@ export interface TypesManagerProps {
   description?: string;
   types: TypeRecord[];
   isLoading: boolean;
+  canWrite?: boolean;
   /** When set, the form lets this type be assigned one of these built-in browsers. */
   browserKindOptions?: BrowserKindOption[];
   /** When set, a brand-new type starts pre-populated with these fields instead of a blank row -
@@ -75,6 +76,7 @@ export default function TypesManager({
   description,
   types,
   isLoading,
+  canWrite = true,
   browserKindOptions,
   defaultFields,
   defaultMapping,
@@ -106,6 +108,7 @@ export default function TypesManager({
   };
 
   const handleSubmit = async (result: TypeFormResult) => {
+    if (!canWrite) return;
     setIsSubmitting(true);
     try {
       if (dialogState.editing) {
@@ -136,7 +139,7 @@ export default function TypesManager({
   const isDeleteConfirmationValid = deleteConfirmationText.trim().toLowerCase() === "confirm";
 
   const handleDelete = async () => {
-    if (!pendingDelete) return;
+    if (!canWrite || !pendingDelete) return;
     if (cascadeDelete && !isDeleteConfirmationValid) return;
     setIsDeleting(true);
     try {
@@ -160,7 +163,7 @@ export default function TypesManager({
           <h3 className="text-lg font-semibold">{title}</h3>
           {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
         </div>
-        <Button type="button" variant="outline" onClick={openAdd} className="shrink-0">
+        <Button type="button" variant="outline" onClick={openAdd} disabled={!canWrite} className="shrink-0">
           <PlusIcon />
           Add {singularLabel.toLowerCase()}
         </Button>
@@ -206,6 +209,7 @@ export default function TypesManager({
                         variant="ghost"
                         size="icon"
                         onClick={() => openEdit(type)}
+                        disabled={!canWrite}
                         aria-label={`Edit ${type.label}`}
                       >
                         <PencilSquareIcon />
@@ -216,6 +220,7 @@ export default function TypesManager({
                           size="icon"
                           className="text-destructive hover:text-destructive"
                           onClick={() => setPendingDelete(type)}
+                          disabled={!canWrite}
                           aria-label={`Delete ${type.label}`}
                         >
                           <TrashIcon />
@@ -231,7 +236,7 @@ export default function TypesManager({
       </div>
 
       <TypeFormDialog
-        isOpen={dialogState.open}
+        isOpen={canWrite && dialogState.open}
         onClose={closeDialog}
         onSubmit={handleSubmit}
         initial={dialogState.editing}
@@ -245,7 +250,7 @@ export default function TypesManager({
       />
 
       <SimpleDialog
-        isOpen={pendingDelete !== null}
+        isOpen={canWrite && pendingDelete !== null}
         title={pendingDelete ? `Delete ${singularLabel.toLowerCase()} "${pendingDelete.label}"` : ""}
       >
         <div className="space-y-4">
