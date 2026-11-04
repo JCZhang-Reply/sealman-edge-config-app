@@ -14,9 +14,10 @@ import { QueryClientProvider } from "@tanstack/react-query";
 // import { SmartEmsSettings } from "@/features/Devices/Network/smart_ems/pages/settings.tsx";
 import SettingsLayout from "./pages/settings/SettingsLayout";
 import PlatformTypesSettings from "./pages/settings/PlatformTypesSettings";
-import TemplatesSettings from "./pages/settings/TemplatesSettings";
-import SettingsPlaceholder from "./pages/settings/SettingsPlaceholder";
+import PageTitle from "./components/Typography/PageTitle";
 import SealAgentSettings from "./pages/settings/SealAgentSettings";
+import PresetTemplateVariablesSettings from "./pages/settings/PresetTemplateVariablesSettings";
+import { DeviceTemplateVariablesSection, IOTEDGE_AGENT_VARIABLES, IOTEDGE_REGISTRY_VARIABLES, SEALMAN_EMS_VARIABLES } from "./pages/settings/TemplatesSettings";
 import DeploymentsLayout from "./pages/deployments/DeploymentsLayout";
 import AssetConfigurationLayout from "./pages/assetConfiguration/AssetConfigurationLayout";
 import { SmartEmsAuthCallback } from "./features/Devices/Network/smart_ems/pages/AuthCallback";
@@ -86,7 +87,7 @@ export default function App() {
             <Route path="platform-types" element={<AssetConfigurationLayout />}>
               <Route index element={<Navigate to="asset-types" replace />} />
               <Route path="asset-types" element={<PlatformTypesSettings />} />
-              <Route path="templates" element={<Navigate to="/settings/templates" replace />} />
+              <Route path="templates" element={<Navigate to="/settings/sealman-ems" replace />} />
             </Route>
             <Route path="deployments" element={<DeploymentsLayout />}>
               <Route index element={<Navigate to="management" replace />} />
@@ -136,17 +137,44 @@ export default function App() {
               <Route path="seal-agent" element={<SealAgentSettings />} />
               <Route
                 path="azure-iot-edge"
-                element={<SettingsPlaceholder title="Azure IoT Edge" description="Connection and runtime settings for Azure IoT Edge." />}
+                element={
+                  <PresetTemplateVariablesSettings
+                    title="Azure IoT Edge"
+                    description="Template variables used to provision the Azure IoT Edge runtime on devices. Empty fields fall back to the template default."
+                    sections={[
+                      {
+                        title: "Container Registry",
+                        description: "Registry from which the IoT Edge daemon pulls its containers.",
+                        variables: IOTEDGE_REGISTRY_VARIABLES,
+                      },
+                      {
+                        title: "Edge Agent",
+                        description: "Image of the IoT Edge agent started by the IoT Edge daemon.",
+                        variables: IOTEDGE_AGENT_VARIABLES,
+                      },
+                    ]}
+                  />
+                }
               />
               <Route
                 path="sealman-ems"
-                element={<SettingsPlaceholder title="SEALMAN EMS" description="Settings for the SEALMAN Edge Management System." />}
+                element={
+                  <PresetTemplateVariablesSettings
+                    title="SEMS"
+                    description="Template variables for the connection of devices to the SEALMAN Edge Management System. Empty fields fall back to the template default."
+                    sections={[{ title: "Connection", variables: SEALMAN_EMS_VARIABLES }]}
+                  >
+                    <div className="space-y-6">
+                      <PageTitle
+                        title="Variables"
+                        description="Additional template variables applied to all devices."
+                      />
+                      <DeviceTemplateVariablesSection />
+                    </div>
+                  </PresetTemplateVariablesSettings>
+                }
               />
-              <Route
-                path="container-registries"
-                element={<SettingsPlaceholder title="Container Registries" description="Registries used to pull container images for deployments." />}
-              />
-              <Route path="templates" element={<TemplatesSettings />} />
+              <Route path="templates" element={<Navigate to="/settings/sealman-ems" replace />} />
               <Route path="extensions" element={<ExtensionAccess />}>
                 <Route index element={<ExtensionsSettings />} />
                 <Route element={<ExtensionAccess permissionKey={PERMISSION_KEYS.EXTENSION_REGISTER} />}>

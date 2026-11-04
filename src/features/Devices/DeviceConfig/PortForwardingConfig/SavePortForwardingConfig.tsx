@@ -1,7 +1,12 @@
 import { Button } from "@/components/ui/button";
+import { WaterLoader } from "@/components/ui/water-loader";
+import { withPermissionRequiredTooltip } from "@/features/authorization/permissions/withPermissionRequiredTooltip";
+import { PERMISSION_KEYS } from "@/features/authorization/permissions/permission-keys";
 import { usePortForwardingConfig } from "./useContext";
 import { useSavePortForwardingConfig } from "./useSavePortForwardingConfig";
 import { toast } from "react-toastify";
+
+const GuardedButton = withPermissionRequiredTooltip(Button);
 
 export default function SavePortForwardingConfig({
   deviceId,
@@ -14,7 +19,10 @@ export default function SavePortForwardingConfig({
   if (!config) return null;
 
   return (
-    <Button
+    <GuardedButton
+      deviceId={deviceId}
+      permissionKey={PERMISSION_KEYS.DEVICE_NETWORK_WRITE}
+      disabled={mutation.isPending}
       onClick={() =>
         mutation.mutate(
           {
@@ -49,7 +57,8 @@ export default function SavePortForwardingConfig({
         )
       }
     >
+      {mutation.isPending && <WaterLoader />}
       Save
-    </Button>
+    </GuardedButton>
   );
 }

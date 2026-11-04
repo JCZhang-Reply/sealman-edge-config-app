@@ -7,35 +7,15 @@ import { toast } from "react-toastify";
 import { getErrorMessage } from "@/lib/errors";
 import { edgeConfigApi } from "../../../api/edgeConfig/edgeConfigApi";
 import { CMD_PROXY_MODULE_NAME } from "@/api/edgeConfig/moduleNames";
-import { JSONTree } from "react-json-tree";
 import { useState } from "react";
 import {
-  PrinterIcon,
+  ClipboardDocumentIcon,
   ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import { withPermissionRequiredTooltip } from "@/features/authorization/permissions/withPermissionRequiredTooltip";
 import { withPermissionAndModuleRequiredTooltip } from "@/features/authorization/permissions/withPermissionAndModuleRequiredTooltip";
 import { PERMISSION_KEYS } from "@/features/authorization/permissions/permission-keys";
-
-const theme = {
-  scheme: "monokai",
-  base00: "#272822",
-  base01: "#383830",
-  base02: "#49483e",
-  base03: "#75715e",
-  base04: "#a59f85",
-  base05: "#f8f8f2",
-  base06: "#f5f4f1",
-  base07: "#f9f8f5",
-  base08: "#f92672",
-  base09: "#fd971f",
-  base0A: "#f4bf75",
-  base0B: "#a6e22e",
-  base0C: "#a1efe4",
-  base0D: "#66d9ef",
-  base0E: "#ae81ff",
-  base0F: "#cc6633",
-};
+import { ConfigViewer } from "./ConfigViewer";
 
 const PermissionGuardedButton = withPermissionRequiredTooltip(Button);
 const PermissionAndModuleGuardedButton = withPermissionAndModuleRequiredTooltip(Button);
@@ -116,7 +96,7 @@ export function DeviceSemsConfigExport() {
         onClick={() => exportConfig()}
       >
         {isExporting && <WaterLoader />}
-        Show desired Config
+        Show desired config
       </PermissionGuardedButton>
       <PermissionAndModuleGuardedButton
           deviceId={deviceId}
@@ -127,31 +107,34 @@ export function DeviceSemsConfigExport() {
           onClick={() => loadConfig()}
         >
           {isLoadingConfig && <WaterLoader />}
-          Show active Config
+          Show active config
         </PermissionAndModuleGuardedButton>
       <Dialog open={Boolean(jsonData) && isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>
               {configType === "sems"
                 ? "Desired Device Configuration"
-                : "Deployed Device Configuration"}
+                : "Active Device Configuration"}
             </DialogTitle>
-            <DialogDescription className="sr-only">Device configuration as JSON</DialogDescription>
+            <DialogDescription>
+              {configType === "sems"
+                ? "Configuration the platform wants to apply to this device."
+                : "Configuration currently running on the device."}
+              {" "}Secrets are hidden in the overview.
+            </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-2">
+          <div className="flex justify-end gap-2">
             <Button variant="outline" size="sm" onClick={handleCopy}>
-              <PrinterIcon />
-              Copy
+              <ClipboardDocumentIcon />
+              Copy JSON
             </Button>
             <Button variant="outline" size="sm" onClick={handleDownload}>
               <ArrowDownTrayIcon />
               Download
             </Button>
           </div>
-          <div className="max-h-96 overflow-auto">
-            {jsonData && <JSONTree data={jsonData} theme={theme} />}
-          </div>
+          {jsonData && <ConfigViewer data={jsonData} />}
           <DialogFooter>
             <Button onClick={() => setIsModalOpen(false)}>Close</Button>
           </DialogFooter>

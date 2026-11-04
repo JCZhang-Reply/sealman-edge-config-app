@@ -1,8 +1,7 @@
-import { Heading } from "@/components/Typography/Heading";
-import { WrenchScrewdriverIcon } from "@heroicons/react/24/outline";
 import { useContext, useMemo } from "react";
 import { DeviceNatConfigRulesContext } from "./context";
 import isVersionEligible from "@/utils/isVersionEligible";
+import { WaterLoader } from "@/components/ui/water-loader";
 
 interface props {
   children?: React.ReactNode
@@ -14,43 +13,23 @@ export default function NatConfigHeader({children}: props) {
     smartEmsData?.deviceFirmwareVersion ?? "", "1.6.0"),
   [smartEmsData?.deviceFirmwareVersion])
 
-  const Header = ({ msg }: {msg?: string}) => {
-    return (
-      <>
-        <Heading processing={isLoading}>
-          <WrenchScrewdriverIcon className="w-7 h-7 mr-1" />
-          <span className="mr-4">1:1 NAT Configuration</span>
-        </Heading>
-        <p className="m-4">
-          {msg}
-        </p>
-      </>
-    )
-  }
+  const Message = ({ msg, loading }: { msg: string, loading?: boolean }) => (
+    <div className="space-y-4 rounded-lg border bg-background p-4">
+      <h2 className="text-lg font-semibold leading-none tracking-tight">1:1 NAT</h2>
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        {loading && <WaterLoader className="h-4 w-4" />}
+        {msg}
+      </p>
+    </div>
+  )
 
   if (isLoading) {
-    return (
-      <Header msg="Loading..."/>
-    )
+    return <Message msg="Loading..." loading />
   }
-
-  // TODO: If error is needed
-  // if (status === "error") {
-  //   return (
-  //     <Header msg="Something went wrong please contact support"/>
-  //   )
-  // }
 
   if (!elligible) {
-    return (
-      <Header msg="Your firmware version is not compatible for 1:1 NAT Configuration" />
-    )
+    return <Message msg="Your firmware version is not compatible for 1:1 NAT Configuration" />
   }
 
-  return (
-    <>
-      <Header />
-      {children}
-    </>
-  )
+  return <>{children}</>
 }

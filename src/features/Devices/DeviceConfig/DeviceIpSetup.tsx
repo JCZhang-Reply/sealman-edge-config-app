@@ -101,7 +101,6 @@ function InterfacesForm({ interfaceData }: { interfaceData: InterfaceData }) {
   }
 
   const handleChange = (interfaceName: "lan1" | "lan2" | "lan3", name: string, value: string | boolean | null) => {
-    console.log(value)
     if (value === ""){
       value = null
     }
@@ -119,35 +118,47 @@ function InterfacesForm({ interfaceData }: { interfaceData: InterfaceData }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2">
-      <div className="grid grid-cols-2 gap-2">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid gap-4 xl:grid-cols-2">
         <InterfaceForm
           interfaceName="lan2"
-          readableInterfaceName={<><GlobeAltIcon className="w-6 mr-1" />Lan-2 Internet</>}
+          title="LAN2"
+          icon={<GlobeAltIcon className="h-5 w-5" />}
           interfaceForm={interfaceForm}
           handleChange={handleChange} />
         <InterfaceForm
           interfaceName="lan3"
-          readableInterfaceName={<><CpuChipIcon className="w-6 mr-1" />Lan-3 Machine Network</>}
+          title="LAN3"
+          icon={<CpuChipIcon className="h-5 w-5" />}
           interfaceForm={interfaceForm}
           handleChange={handleChange} />
       </div>
-      <GuardedButton deviceId={deviceId} permissionKey={PERMISSION_KEYS.DEVICE_NETWORK_WRITE} type="submit" disabled={isPending}>
-        {isPending && <WaterLoader />}
-        Save
-      </GuardedButton>
+      <div className="flex justify-end">
+        <GuardedButton deviceId={deviceId} permissionKey={PERMISSION_KEYS.DEVICE_NETWORK_WRITE} type="submit" disabled={isPending}>
+          {isPending && <WaterLoader />}
+          Save
+        </GuardedButton>
+      </div>
     </form>
   )
 }
 
 interface InterfaceFormProps {
   interfaceName: keyof InterfaceData["interfaceConfig"]
-  readableInterfaceName: React.ReactNode
+  title: string
+  icon: React.ReactNode
   interfaceForm: InterfaceData
   handleChange: (interfaceName: keyof InterfaceData["interfaceConfig"], name: string, value: string | boolean) => void
 }
 
-function InterfaceForm({ interfaceForm, interfaceName, handleChange, readableInterfaceName }: InterfaceFormProps) {
+const STATIC_FIELDS = [
+  { name: "ip", label: "IP address", placeholder: "e.g. 192.168.10.10", required: true },
+  { name: "subnet", label: "Subnet (prefix length)", placeholder: "e.g. 24", required: true },
+  { name: "gw", label: "Gateway", placeholder: "e.g. 192.168.10.1", required: false },
+  { name: "dns", label: "DNS server", placeholder: "e.g. 192.168.10.1", required: false },
+] as const;
+
+function InterfaceForm({ interfaceForm, interfaceName, handleChange, title, icon }: InterfaceFormProps) {
   const { deviceId } = useParams();
   const [modalData, setModalData] = useState<NetworkInfo | null>(null);
   const [moduleGuardMessage, setModuleGuardMessage] = useState<string | null>(null);
@@ -158,10 +169,8 @@ function InterfaceForm({ interfaceForm, interfaceName, handleChange, readableInt
     handleChange(interfaceName, name, value);
   }
 
-  const handleToggleChange = (ev: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = ev.target;
-    handleChange(interfaceName, name, checked);
-  }
+  const config = interfaceForm.interfaceConfig[interfaceName];
+  const isDhcp = config.dhcp;
 
   const handleInfoClick = async () => {
     setIsLoadingModal(true)
@@ -208,57 +217,77 @@ function InterfaceForm({ interfaceForm, interfaceName, handleChange, readableInt
   }
 
   return (
-    <div className="flex flex-col gap-2">
-
-      <div className="flex font-medium">
-        {readableInterfaceName}
-        <InformationCircleIcon className="w-5 h-5 ml-2 cursor-pointer" onClick={handleInfoClick} />
+    <div className="space-y-6 rounded-lg border bg-background p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">{icon}</span>
+          <h3 className="text-base font-semibold leading-none tracking-tight">{title}</h3>
+        </div>
+        <Button type="button" variant="ghost" size="sm" onClick={handleInfoClick} className="text-muted-foreground">
+          <InformationCircleIcon className="h-4 w-4" />
+          Current status
+        </Button>
       </div>
 
+      <div className="flex flex-col gap-3">
+        <Label>IP configuration</Label>
+        <div role="radiogroup" aria-label={`${title} IP configuration`} className="inline-flex self-start rounded-md border bg-muted p-1 text-sm">
+          {[
+            { dhcp: true, label: "Automatic (DHCP)" },
+            { dhcp: false, label: "Static" },
+          ].map((option) => (
+            <button
+              key={option.label}
+              type="button"
+              role="radio"
+              aria-checked={isDhcp === option.dhcp}
+              onClick={() => handleChange(interfaceName, "dhcp", option.dhcp)}
+              className={`rounded px-3 py-1.5 font-medium transition-colors ${
+                isDhcp === option.dhcp
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      <Label>DHCP</Label>
-      <input
-        type="checkbox"
-        name="dhcp"
-        checked={interfaceForm.interfaceConfig[interfaceName].dhcp}
-        onChange={handleToggleChange}
-      />
-
-      <Label>IP</Label>
-      <Input
-        type="text"
-        name="ip"
-        value={interfaceForm.interfaceConfig[interfaceName].ip}
-        onChange={handleFormChange}
-        disabled={interfaceForm.interfaceConfig[interfaceName].dhcp}
-      />
-
-      <Label>Subnet</Label>
-      <Input
-        type="text"
-        name="subnet"
-        value={interfaceForm.interfaceConfig[interfaceName].subnet}
-        onChange={handleFormChange}
-        disabled={interfaceForm.interfaceConfig[interfaceName].dhcp}
-      />
-
-      <Label>Gateway</Label>
-      <Input
-        type="text"
-        name="gw"
-        value={interfaceForm.interfaceConfig[interfaceName].gw}
-        onChange={handleFormChange}
-        disabled={interfaceForm.interfaceConfig[interfaceName].dhcp}
-      />
-
-      <Label>DNS</Label>
-      <Input
-        type="text"
-        name="dns"
-        value={interfaceForm.interfaceConfig[interfaceName].dns}
-        onChange={handleFormChange}
-        disabled={interfaceForm.interfaceConfig[interfaceName].dhcp}
-      />
+      {isDhcp ? (
+        <div className="flex gap-2 rounded-md border border-dashed bg-muted/40 p-3 text-sm text-muted-foreground">
+          <InformationCircleIcon className="h-5 w-5 shrink-0" />
+          <p>
+            IP address, subnet, gateway and DNS are obtained automatically from the DHCP server in this network.
+            Use <span className="font-medium text-foreground">Current status</span> to see the assigned values.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Enter the address settings for this interface manually.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {STATIC_FIELDS.map((field) => (
+              <div key={field.name} className="space-y-1.5">
+                <Label htmlFor={`${interfaceName}-${field.name}`}>
+                  {field.label}
+                  {field.required ? <span className="text-destructive"> *</span> : <span className="font-normal text-muted-foreground"> (optional)</span>}
+                </Label>
+                <Input
+                  id={`${interfaceName}-${field.name}`}
+                  type="text"
+                  name={field.name}
+                  placeholder={field.placeholder}
+                  value={config[field.name] ?? ""}
+                  onChange={handleFormChange}
+                  required={field.required}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {isLoadingModal && (
         <Dialog open>
           <DialogContent className="max-w-sm">

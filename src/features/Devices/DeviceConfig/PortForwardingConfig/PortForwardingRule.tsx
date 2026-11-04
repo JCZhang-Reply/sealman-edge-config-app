@@ -5,9 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { PortForwardingRule as Rule } from "./types";
 import { isValidIP } from "@/lib/validateIP";
-import { TrashIcon } from "@heroicons/react/24/outline";
-import { Button } from "@/components/ui/button";
 import { parseRuleName } from "@/utils/parseRuleName";
+import { DeleteRuleButton, RuleRow } from "../RuleConfigSection";
 
 
 
@@ -45,24 +44,26 @@ const isInvalidDestAddr = !!rule.destAddr && !isValidIP(String(rule.destAddr).tr
   };
 
   return (
-    <div className="flex gap-4 mb-2 items-center">
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs">Name</Label>
+    <RuleRow onDelete={<DeleteRuleButton onClick={() => deleteRule(index)} />}>
+      <div className="space-y-1.5">
+        <Label htmlFor={`pf-name-${index}`}>Name</Label>
         <Input
+          id={`pf-name-${index}`}
           value={rule.name}
-          className={nameError ? "border-red-500" : undefined}
+          className={nameError ? "border-destructive" : undefined}
+          aria-invalid={!!nameError}
           onChange={(e) => onChange("name", e.target.value)}
         />
-        {nameError && <p className="text-red-500 text-xs mt-1">{nameError}</p>}
+        {nameError && <p className="text-xs text-destructive">{nameError}</p>}
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs">Interface</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor={`pf-interface-${index}`}>Interface</Label>
         <Select
           value={rule.interface ?? ""}
           onValueChange={(value) => onChange("interface", value as Rule["interface"])}
         >
-          <SelectTrigger className="w-28">
+          <SelectTrigger id={`pf-interface-${index}`}>
             <SelectValue placeholder="Select" />
           </SelectTrigger>
           <SelectContent>
@@ -75,40 +76,38 @@ const isInvalidDestAddr = !!rule.destAddr && !isValidIP(String(rule.destAddr).tr
         </Select>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs">Source Port</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor={`pf-srcPort-${index}`}>Source Port</Label>
         <Input
+          id={`pf-srcPort-${index}`}
           type="number"
           value={rule.srcPort}
           onChange={(e) => onChange("srcPort", e.target.value === "" ? undefined : Number(e.target.value))}
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs">Destination Address</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor={`pf-destAddr-${index}`}>Destination IP</Label>
         <Input
+          id={`pf-destAddr-${index}`}
           value={rule.destAddr ?? ""}
           onChange={(e) => onChange("destAddr", e.target.value as typeof rule.destAddr)}
           inputMode="numeric"
           placeholder="e.g. 192.168.1.100"
-          className={isInvalidDestAddr ? "border-red-500" : undefined}
+          className={isInvalidDestAddr ? "border-destructive" : undefined}
           aria-invalid={isInvalidDestAddr}
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs">Destination Port</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor={`pf-destPort-${index}`}>Destination Port</Label>
         <Input
+          id={`pf-destPort-${index}`}
           type="number"
           value={rule.destPort}
           onChange={(e) => onChange("destPort", e.target.value === "" ? undefined : Number(e.target.value))}
         />
       </div>
-      <div className="mt-6">
-        <Button variant="destructive" onClick={() => deleteRule(index)}>
-          Delete <TrashIcon />
-        </Button>
-      </div>
-    </div>
+    </RuleRow>
   );
 }

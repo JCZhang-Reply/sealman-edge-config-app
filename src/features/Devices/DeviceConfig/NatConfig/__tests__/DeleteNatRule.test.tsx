@@ -7,13 +7,13 @@ import { DeviceNatConfigRulesContext } from "../context"
 describe("DescribeNatRule", () => {
   it("Should call deleteRule from the context upon delete button click", async () => {
     const user = userEvent.setup()
-    const { getByText } = render(
+    const { getByRole } = render(
       <DeviceNatConfigRulesContext.Provider value={ctx}>
         <DeleteNatRule index={0}/>
       </DeviceNatConfigRulesContext.Provider>
     )
 
-    await user.click(getByText("Delete rule"))
+    await user.click(getByRole("button", { name: "Delete rule" }))
     expect(ctx.deleteRule).toHaveBeenCalledWith(0)
   })
 })

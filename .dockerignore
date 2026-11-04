@@ -1,10 +1,27 @@
-.vscode
-.gitignore
-compose.yaml
-README.md
-build
-node_modules
-pipelines
-.devcontainer
-.cronJob
-.cypress
+# Whitelist: exclude everything, then include only what the build/runtime needs
+*
+
+!package.json
+!package-lock.json
+!.npmrc
+!index.html
+!vite.config.ts
+!vitest.setup.ts
+!postcss.config.js
+!tsconfig*.json
+!src/
+!public/
+!nginx/
+!inject-env.sh
+# Only the variable template; real values are injected at container start
+!.env.example
+
+# Re-exclude secrets and artifacts inside whitelisted paths
+**/.env
+**/.env.local
+**/.env.*.local
+**/.env.development*
+**/.env.production*
+**/node_modules/
+**/*.pem
+**/*.key

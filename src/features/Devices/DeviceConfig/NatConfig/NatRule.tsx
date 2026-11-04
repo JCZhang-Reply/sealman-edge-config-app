@@ -1,9 +1,11 @@
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { components } from "@/generated/edge-administration/types";
 import { useState, useContext } from "react";
 import { DeviceNatConfigRulesContext } from "./context";
 import { DeleteNatRule } from "./DeleteNatRule";
 import { parseRuleName } from "@/utils/parseRuleName";
+import { RuleRow } from "../RuleConfigSection";
 
 export default function NatRule({ index, rule }: {index: number, rule: components["schemas"]["NatRule"]}) {
   const { updateRule }  = useContext(DeviceNatConfigRulesContext)
@@ -32,38 +34,35 @@ export default function NatRule({ index, rule }: {index: number, rule: component
   }
 
   return (
-    <div className="flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-      <div className="block sm:hidden border-t border-gray-300 my-2 w-full"></div>
-      <div className="flex flex-col lg:flex-row lg:items-center lg:space-x-2 w-full">
-        <label htmlFor={`name-${index}`} className="lg:w-2/5">Name:</label>
-        <div className="w-full">
-          <Input
-            id={`name-${index}`}
-            value={rule.name}
-            className={`w-full${nameError ? " border border-red-500" : ""}`}
-            onChange={e => handleOnChange({
-              name: "name",
-              value: (e.target as HTMLInputElement).value
-            })}
-          />
-          {nameError && <p className="text-red-500 text-xs mt-1">{nameError}</p>}
-        </div>
+    <RuleRow onDelete={<DeleteNatRule index={index}/>}>
+      <div className="space-y-1.5">
+        <Label htmlFor={`name-${index}`}>Name</Label>
+        <Input
+          id={`name-${index}`}
+          value={rule.name}
+          className={nameError ? "border-destructive" : undefined}
+          aria-invalid={!!nameError}
+          onChange={e => handleOnChange({
+            name: "name",
+            value: (e.target as HTMLInputElement).value
+          })}
+        />
+        {nameError && <p className="text-xs text-destructive">{nameError}</p>}
       </div>
-      <div className="flex flex-col lg:flex-row lg:items-center lg:space-x-2 w-full">
-        <label htmlFor={`extIp-${index}`} className="lg:w-2/5">External IP:</label>
-        <Input id={`extIp-${index}`} value={rule.extIp} className="w-full" onChange={e => handleOnChange({
+      <div className="space-y-1.5">
+        <Label htmlFor={`extIp-${index}`}>External IP</Label>
+        <Input id={`extIp-${index}`} value={rule.extIp} placeholder="e.g. 10.0.0.10" onChange={e => handleOnChange({
           name: "extIp",
           value: (e.target as HTMLInputElement).value
         })}/>
       </div>
-      <div className="flex flex-col lg:flex-row lg:items-center lg:space-x-2 w-full">
-        <label htmlFor={`intIp-${index}`} className="lg:w-2/5">Internal IP:</label>
-        <Input id={`intIp-${index}`} value={rule.intIp} className="w-full" onChange={e => handleOnChange({
+      <div className="space-y-1.5">
+        <Label htmlFor={`intIp-${index}`}>Internal IP</Label>
+        <Input id={`intIp-${index}`} value={rule.intIp} placeholder="e.g. 192.168.1.100" onChange={e => handleOnChange({
           name: "intIp",
           value: (e.target as HTMLInputElement).value
         })}/>
       </div>
-      <DeleteNatRule index={index}/>
-    </div>
+    </RuleRow>
   )
 }

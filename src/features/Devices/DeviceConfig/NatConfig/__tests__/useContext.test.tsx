@@ -54,21 +54,21 @@ describe("Device NAT Config custom hook", () => {
 
     expect(result.current.natConfig?.nat_rules?.length).toBe(3)
     expect(result.current.natConfig?.nat_rules![2]).toMatchObject({extIp: "1", intIp: "2", name: "my_new_rule_name"})
+    expect(result.current.natConfig?.nat_enabled).toBe(true)
   })
 
-  // TODO: could have been a suite with an array of expected: [true, false] but I didn't manage to make it work for an obscure reason
-  it("should toggle the nat enable flag", async () => {
-     const { result } = renderHook(() => useDeviceNatConfigContext("deviceId"))
+  it("should disable nat once the last rule is deleted", () => {
+    const { result } = renderHook(() => useDeviceNatConfigContext("deviceId"))
+    const ruleCount = result.current.natConfig?.nat_rules?.length ?? 0
 
-     act(() => {
-       result.current.toggleNat()
-     })
-     expect(result.current.natConfig?.nat_enabled).toBe(true)
+    for (let i = 0; i < ruleCount; i++) {
+      act(() => {
+        result.current.deleteRule(0)
+      })
+    }
 
-     act(() => {
-       result.current.toggleNat()
-     })
-     expect(result.current.natConfig?.nat_enabled).toBe(false)
+    expect(result.current.natConfig?.nat_rules?.length).toBe(0)
+    expect(result.current.natConfig?.nat_enabled).toBe(false)
   })
 
   it("should update a specific rule", () => {

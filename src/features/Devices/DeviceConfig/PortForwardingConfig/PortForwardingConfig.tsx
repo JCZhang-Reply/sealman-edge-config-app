@@ -1,39 +1,29 @@
-import { Heading } from "@/components/Typography/Heading";
 import { usePortForwardingConfig } from "./useContext";
 import PortForwardingRules from "./PortForwardingRules";
-import { Button } from "@/components/ui/button";
-import { PlusIcon, WrenchScrewdriverIcon } from "@heroicons/react/24/outline";
+import { RuleConfigSection } from "../RuleConfigSection";
 
 
-export default function PortForwardingConfig() {
-  const { addRule } = usePortForwardingConfig();
-  
+export default function PortForwardingConfig({ footer }: { footer?: React.ReactNode }) {
+  const { config, addRule } = usePortForwardingConfig();
+
   return (
-    <div className="rounded-md py-4 pr-4 space-y-4">
-      <Heading>
-        <WrenchScrewdriverIcon className="w-7 h-7 mr-1" />Port Forwarding Configuration</Heading>
-
-      {/* Rules */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Rules</span>
-          <Button
-            onClick={() =>
-              addRule({
-                name: "",
-                interface: "",
-                srcPort: 0,
-                destAddr: "",
-                destPort: 0,
-              })
-            }
-          >
-            <PlusIcon />Add a rule
-          </Button>
-        </div>
-
-        <PortForwardingRules />
-      </div>
-    </div>
+    <RuleConfigSection
+      title="Port Forwarding"
+      description="Forward incoming traffic on a port of an interface to a port of a device in the network."
+      onAdd={() =>
+        addRule({
+          name: "",
+          interface: "",
+          srcPort: 0,
+          destAddr: "",
+          destPort: 0,
+        })
+      }
+      isEmpty={!config?.rules?.length}
+      emptyMessage="No port forwarding rules defined."
+      footer={footer}
+    >
+      <PortForwardingRules />
+    </RuleConfigSection>
   );
 }

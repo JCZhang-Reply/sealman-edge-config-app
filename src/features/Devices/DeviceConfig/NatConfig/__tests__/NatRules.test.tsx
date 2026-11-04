@@ -5,6 +5,7 @@ import { ctx } from "../__mocks__/context"
 import { DeviceNatConfigRulesContext } from "../context"
 
 vi.mock("../NatRule")
+vi.mock("../SaveNatConfig", () => ({ default: () => null }))
 
 describe("Nat Rules", () => {
   it("should call addRules from the context on click on Add a new_rule_name button", async () => {

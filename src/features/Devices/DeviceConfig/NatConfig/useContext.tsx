@@ -13,29 +13,10 @@ export default function useDeviceNatConfigContext(deviceId: string): NatConfigRu
   const isLoading = isGetNatConfigLoading || isSmartEmsStatusLoading
 
   const addNatRule = (rule: components["schemas"]["NatRule"]) => {
-    setNatConfig(p => {
-      if (!p) {
-        return
-      }
-      const pRules = p.nat_rules ?? []
-
-
-      return {
-        ...p,
-        nat_rules: [
-          ...pRules,
-          rule
-        ]
-      }
-    })
-  }
-
-  const toggleNat = () => {
-    const setNatTo = !(natConfig?.nat_enabled)
     setNatConfig(p => ({
       ...p,
-      nat_enabled: setNatTo,
-      nat_rules: []
+      nat_enabled: true,
+      nat_rules: [...(p?.nat_rules ?? []), rule],
     }))
   }
 
@@ -55,15 +36,13 @@ export default function useDeviceNatConfigContext(deviceId: string): NatConfigRu
   }
 
   const deleteRule = (index: number) => {
-    if (!natConfig) {
-      return;
-    }
-    if (!natConfig.nat_rules){
-      return;
-    }
-    const config = Object.assign({}, natConfig)
-    config.nat_rules?.splice(index, 1)
-    setNatConfig(config)
+    setNatConfig(p => {
+      if (!p?.nat_rules) {
+        return p
+      }
+      const nat_rules = p.nat_rules.filter((_, i) => i !== index)
+      return { ...p, nat_rules, nat_enabled: nat_rules.length > 0 }
+    })
   }
 
   const postConfig = async () => {
@@ -72,7 +51,7 @@ export default function useDeviceNatConfigContext(deviceId: string): NatConfigRu
     }
 
     await postDeviceNatConfig({
-      body: natConfig,
+      body: { ...natConfig, nat_enabled: (natConfig.nat_rules?.length ?? 0) > 0 },
       deviceId,
     })
   }
@@ -89,7 +68,6 @@ export default function useDeviceNatConfigContext(deviceId: string): NatConfigRu
     smartEmsData,
     natConfig,
     addNatRule,
-    toggleNat,
     updateRule,
     deleteRule,
     postConfig,

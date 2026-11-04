@@ -34,9 +34,9 @@ describe("NatRule", () => {
       </DeviceNatConfigRulesContext.Provider>
       )
 
-    await user.type(getByLabelText("Name:"), "X")
-    await user.type(getByLabelText("External IP:"), "X")
-    await user.type(getByLabelText("Internal IP:"), "X")
+    await user.type(getByLabelText("Name"), "X")
+    await user.type(getByLabelText("External IP"), "X")
+    await user.type(getByLabelText("Internal IP"), "X")
 
     expect(ctx.updateRule).toHaveBeenNthCalledWith(1, {
       index: 0,

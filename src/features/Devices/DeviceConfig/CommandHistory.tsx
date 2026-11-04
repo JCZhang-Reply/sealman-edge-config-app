@@ -16,7 +16,7 @@ export default function CommandHistory() {
     <div className="space-y-4">
       <Heading processing={isFetching}>
         <QueueListIcon className="w-7 h-7 mr-1" />
-        Command History
+        Activity
       </Heading>
 
       <DeviceSemsConfigExport />

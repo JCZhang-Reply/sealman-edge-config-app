@@ -12,12 +12,12 @@ import { ActivateConfigButton } from "./ActivateConfigButton";
 import useSmartEmsStatusPolling from "./useSmartEmsStatusPolling";
 
 const TABS = [
-  { title: "Firmware", path: "firmware" },
-  { title: "Command History", path: "command-history" },
-  { title: "Security", path: "security" },
   { title: "Network Interfaces", path: "network-interfaces" },
+  { title: "Firmware", path: "firmware" },
   { title: "NAT", path: "nat" },
   { title: "Port Forwarding", path: "port-forwarding" },
+  { title: "Security", path: "security" },
+  { title: "Activity", path: "config-activity" },
 ];
 
 export default function DeviceConfig() {
@@ -61,9 +61,10 @@ export default function DeviceConfig() {
 
         <div className="min-w-0 flex-1 space-y-6 p-6">
         <Routes>
-          <Route index element={<Navigate to={`${base}/firmware`} replace />} />
+          <Route index element={<Navigate to={`${base}/network-interfaces`} replace />} />
           <Route path="firmware" element={<Firmware />} />
-          <Route path="command-history" element={<CommandHistory />} />
+          <Route path="config-activity" element={<CommandHistory />} />
+          <Route path="command-history" element={<Navigate to={`${base}/config-activity`} replace />} />
           <Route path="security" element={<SecurityInformation />} />
           <Route
             path="network-interfaces"
@@ -79,12 +80,11 @@ export default function DeviceConfig() {
             path="port-forwarding"
             element={
               <PortForwardingConfigProvider deviceId={deviceId}>
-                <PortForwardingConfig />
-                <SavePortForwardingConfig deviceId={deviceId} />
+                <PortForwardingConfig footer={<SavePortForwardingConfig deviceId={deviceId} />} />
               </PortForwardingConfigProvider>
             }
           />
-          <Route path="*" element={<Navigate to={`${base}/firmware`} replace />} />
+          <Route path="*" element={<Navigate to={`${base}/network-interfaces`} replace />} />
         </Routes>
         </div>
       </div>

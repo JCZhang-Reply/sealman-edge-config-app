@@ -1,26 +1,54 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { TrashIcon } from "@heroicons/react/24/outline";
-import { TransferList } from "@/components/settings/TransferList";
 import { edgeConfigApiHooks } from "@/api/edgeConfig/edgeConfigApiHooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorState, LoadingState } from "@/components/ui/page-state";
-import PageTitle from "@/components/Typography/PageTitle";
 import { getErrorMessage } from "@/lib/errors";
 
-function TemplateVariableRow({
+export type PresetTemplateVariable = { name: string; defaultValue: string; deleteWarning?: string };
+
+export const IOTEDGE_REGISTRY_VARIABLES: PresetTemplateVariable[] = [
+  { name: "iotedge_registry_url", defaultValue: "docker.io" },
+  { name: "iotedge_registry_username", defaultValue: "" },
+  { name: "iotedge_registry_password", defaultValue: "" },
+];
+
+export const IOTEDGE_AGENT_VARIABLES: PresetTemplateVariable[] = [
+  { name: "edge_agent_image", defaultValue: "mcr.microsoft.com/azureiotedge-agent:1.4" },
+];
+
+export const SEALMAN_EMS_VARIABLES: PresetTemplateVariable[] = [
+  {
+    name: "sems_device_url",
+    defaultValue: "sems.localhost",
+    deleteWarning:
+      "Deleting this variable resets the SEMS URL on all devices to the template default. Devices may lose their connection to SEMS and can then no longer receive any configuration.",
+  },
+  { name: "sems_polling_interval", defaultValue: "600" },
+];
+
+const PRESET_VARIABLE_NAMES: string[] = [
+  ...IOTEDGE_REGISTRY_VARIABLES,
+  ...IOTEDGE_AGENT_VARIABLES,
+  ...SEALMAN_EMS_VARIABLES,
+].map((v) => v.name);
+
+export function TemplateVariableRow({
   name,
   value,
   onSave,
   onDelete,
   saving,
+  placeholder,
 }: {
   name: string;
   value: string;
   onSave: (name: string, value: string) => void;
   onDelete: (name: string) => void;
   saving: boolean;
+  placeholder?: string;
 }) {
   const [draft, setDraft] = useState(value);
 
@@ -37,6 +65,7 @@ function TemplateVariableRow({
         <Input
           type={name.includes("password") || name.includes("encoded") ? "password" : "text"}
           value={draft}
+          placeholder={placeholder}
           onChange={(e) => setDraft(e.target.value)}
         />
       </td>
@@ -64,7 +93,7 @@ function TemplateVariableRow({
   );
 }
 
-function DeviceTemplateVariablesSection() {
+export function DeviceTemplateVariablesSection() {
   const { variablesQuery, setVariableMutation, deleteVariableMutation } =
     edgeConfigApiHooks.useDeviceTemplateVariables();
 
@@ -115,7 +144,7 @@ function DeviceTemplateVariablesSection() {
   return (
     <div className="bg-card border rounded-lg p-4 space-y-4">
       <p className="text-sm text-muted-foreground">
-        These variables are applied to every new device during creation.
+        These variables are applied to all existing devices and to every new device during creation.
       </p>
 
       <div className="border rounded-md overflow-hidden">
@@ -132,7 +161,9 @@ function DeviceTemplateVariablesSection() {
             </tr>
           </thead>
           <tbody>
-            {Object.entries(variables).map(([name, value]) => (
+            {Object.entries(variables)
+              .filter(([name]) => !PRESET_VARIABLE_NAMES.includes(name))
+              .map(([name, value]) => (
               <TemplateVariableRow
                 key={name}
                 name={name}
@@ -169,65 +200,6 @@ function DeviceTemplateVariablesSection() {
             </tr>
           </tbody>
         </table>
-      </div>
-    </div>
-  );
-}
-
-type TemplateInfo = { id: number; name: string; selected: boolean };
-
-function SelectedTemplatesSection() {
-  const { templatesQuery, saveTemplatesMutation } = edgeConfigApiHooks.useDeviceTemplates();
-
-  if (templatesQuery.isLoading) return <LoadingState label="Loading templates..." />;
-  if (templatesQuery.isError) return <ErrorState title="Could not load templates" message={getErrorMessage(templatesQuery.error)} onRetry={() => templatesQuery.refetch()} />;
-
-  const templates: TemplateInfo[] = templatesQuery.data || [];
-  const selectedTemplates = templates.filter((t) => t.selected).map((t) => t.name);
-  const availableTemplates = templates.filter((t) => !t.selected).map((t) => t.name);
-
-  const handleAdd = (value: string) => {
-    const updated = [...selectedTemplates, value];
-    saveTemplatesMutation.mutate(updated, {
-      onSuccess: () => templatesQuery.refetch(),
-    });
-  };
-
-  const handleRemove = (value: string) => {
-    const updated = selectedTemplates.filter((t: string) => t !== value);
-    saveTemplatesMutation.mutate(updated, {
-      onSuccess: () => templatesQuery.refetch(),
-    });
-  };
-
-  return (
-    <TransferList
-      title=""
-      selectedItems={selectedTemplates}
-      availableItems={availableTemplates}
-      onAdd={handleAdd}
-      onRemove={handleRemove}
-    />
-  );
-}
-
-export default function TemplatesSettings() {
-  return (
-    <div className="space-y-10">
-      <div className="space-y-6">
-        <PageTitle
-          title="Selected Templates"
-          description="Templates that are applied to newly created devices."
-        />
-        <SelectedTemplatesSection />
-      </div>
-
-      <div className="space-y-6">
-        <PageTitle
-          title="Template Variables"
-          description="Values made available to the templates when a device is created."
-        />
-        <DeviceTemplateVariablesSection />
       </div>
     </div>
   );

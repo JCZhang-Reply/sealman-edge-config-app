@@ -5,7 +5,6 @@ export interface NatConfigRulesContextType {
   natConfig?: components["schemas"]["NatConfig"];
   smartEmsData?: components["schemas"]["SemsFirmwareStatus"],
   addNatRule: (rule: components["schemas"]["NatRule"]) => void;
-  toggleNat: () => void
   updateRule: ({index, rule}: {index: number, rule: components["schemas"]["NatRule"]}) => void
   deleteRule: (index: number) => void,
   postConfig: () => Promise<void>,

@@ -40,7 +40,7 @@ export function ActivateConfigButton({ hasPendingChanges }: ActivateConfigButton
 
     onSuccess: (resp: any) => {
       if (resp.showSuccess) {
-        toast.success("Config activation started. See Command History for the result.");
+        toast.success("Config activation started. See Activity for the result.");
         queryClient.invalidateQueries({ queryKey: ["getSmartEmsStatus", deviceId] });
       }
     },
