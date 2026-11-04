@@ -10,7 +10,7 @@ vi.mock("@/api/edgeConfig/edgeConfigApi", () => ({
 import { render } from "@/utils/test-utils"
 import Page from "../Page"
 import { useScanDefinitionStore, useTwinConfigStore } from "../stores"
-import { cleanup, waitFor } from "@testing-library/react"
+import { cleanup, fireEvent, waitFor } from "@testing-library/react"
 import useGetModuleTwinConfigMocked, { createData, createScanDefinition } from "@/generated/edge-administration/hooks/__mocks__/useGetModuleTwinConfig"
 import { Status } from "@/features/Devices/Network/stores"
 import { ApiError } from "@/generated/edge-administration/api"
@@ -79,17 +79,27 @@ describe("Network Page", () => {
     useGetModuleTwinConfigMocked.mockRestore()
   })
 
-  it("should block the page when the required module is not deployed", () => {
+  it("should allow dismissing the missing module warning and show it again for another device", () => {
     useGetModuleTwinConfigMocked.mockReturnValue({
       isLoading: false,
       isError: true,
       error: new ApiError("module missing", 404),
     })
 
-    const { getByText, queryByTestId } = render(<Page deviceId="deviceId" />)
+    const { getByText, getByRole, queryByText, queryByTestId, rerender } = render(<Page deviceId="deviceId" />)
 
     getByText("Missing module")
     getByText(`Module "${NETWORK_DISCOVER_MODULE_NAME}" is required for this functionality.`)
+    expect(queryByTestId("NetworkMainLayout")).not.toBeInTheDocument()
+
+    fireEvent.click(getByRole("button", { name: "Dismiss" }))
+
+    expect(queryByText("Missing module")).not.toBeInTheDocument()
+    expect(queryByTestId("NetworkMainLayout")).toBeInTheDocument()
+
+    rerender(<Page deviceId="anotherDevice" />)
+
+    getByText("Missing module")
     expect(queryByTestId("NetworkMainLayout")).not.toBeInTheDocument()
 
     cleanup()

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import Badge from "../../components/Typography/Badge";
 import { useNavigate, useParams } from "react-router-dom";
-import { ChevronRightIcon, CpuChipIcon, MagnifyingGlassIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { ChevronRightIcon, CpuChipIcon, MagnifyingGlassIcon, ServerStackIcon, TrashIcon } from "@heroicons/react/24/outline";
 import {
   Table,
   TableBody,
@@ -36,6 +37,7 @@ import DeviceManageDialog, { DeleteDeviceDialog } from "./DeviceManageDialog";
 import { Button } from "@/components/ui/button";
 import { ErrorState, LoadingState } from "@/components/ui/page-state";
 import { getErrorMessage } from "@/lib/errors";
+import DeviceRowDetails from "./DeviceRowDetails";
 
 function formatDataForTable(data: DeviceData[] | undefined): DeviceDataDisplay[] {
   if (!data) return [];
@@ -174,18 +176,15 @@ export default function DeviceList() {
     getColumnCanGlobalFilter: (column) => column.id === "deviceId" || column.id === "metadataSearchIndex",
   });
 
-  const calculateDeviceOnlineFilter = () => {
-    if (columnFilters.length === 1 && columnFilters[0].id === "onlineStatus") {
-      return columnFilters[0].value === "online"
+  const deviceOnlineFilter = useMemo(() => {
+    if (columnFilters.length === 1 && columnFilters[0].id === "iotEdgeRuntime") {
+      return columnFilters[0].value === "Connected"
         ? DeviceOnlineFilterStatus.Online
         : DeviceOnlineFilterStatus.Offline;
     } else {
       return DeviceOnlineFilterStatus.All;
     }
-  };
-  const deviceOnlineFilter = useMemo(calculateDeviceOnlineFilter, [
-    columnFilters,
-  ]);
+  }, [columnFilters]);
 
   const filterByStatusFromHeader = (
     deviceOnlineFilterStatus: DeviceOnlineFilterStatus,
@@ -261,6 +260,16 @@ function DeviceTable({ table }: DeviceListProps) {
   const navigate = useNavigate();
   const { deviceId: activeDeviceId } = useParams();
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [expandedDeviceIds, setExpandedDeviceIds] = useState<Set<string>>(() => new Set());
+
+  const toggleDevice = (deviceId: string) => {
+    setExpandedDeviceIds((current) => {
+      const next = new Set(current);
+      if (next.has(deviceId)) next.delete(deviceId);
+      else next.add(deviceId);
+      return next;
+    });
+  };
 
   return (
     <>
@@ -268,6 +277,7 @@ function DeviceTable({ table }: DeviceListProps) {
         <TableHeader className="bg-slate-50">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="hover:bg-transparent">
+              <TableHead className="w-12"><span className="sr-only">Expand device</span></TableHead>
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
@@ -281,30 +291,48 @@ function DeviceTable({ table }: DeviceListProps) {
                       )}
                 </TableHead>
               ))}
-              <TableHead className="w-28" />
+              <TableHead className="sticky right-0 z-10 w-44 bg-slate-50" />
             </TableRow>
           ))}
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows.length === 0 && (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={table.getVisibleLeafColumns().length + 1} className="py-12 text-center text-muted-foreground">
+              <TableCell colSpan={table.getVisibleLeafColumns().length + 2} className="py-12 text-center text-muted-foreground">
                 No devices match the current filter.
               </TableCell>
             </TableRow>
           )}
           {table.getRowModel().rows.map((row) => (
+            <Fragment key={row.original.deviceId}>
             <TableRow
-              key={row.id}
               onClick={() => navigate(`/devices/${row.original.deviceId}`)}
               className={`group cursor-pointer ${activeDeviceId === row.original.deviceId ? "bg-blue-50" : "hover:bg-slate-50"}`}
             >
+              <TableCell className="w-12 px-2 py-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label={`${expandedDeviceIds.has(row.original.deviceId) ? "Collapse" : "Expand"} ${row.original.deviceId}`}
+                  aria-expanded={expandedDeviceIds.has(row.original.deviceId)}
+                  aria-controls={`device-details-${encodeURIComponent(row.original.deviceId)}`}
+                  title={expandedDeviceIds.has(row.original.deviceId) ? "Collapse device details" : "Expand device details"}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    toggleDevice(row.original.deviceId);
+                  }}
+                >
+                  <ChevronRight aria-hidden="true" className={`transition-transform ${expandedDeviceIds.has(row.original.deviceId) ? "rotate-90" : ""}`} />
+                </Button>
+              </TableCell>
               {row.getVisibleCells().map((cell) => (
                 <TableCell key={cell.id} className="py-3">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}
-              <TableCell className="py-3 text-right">
+              <TableCell className={`sticky right-0 z-10 py-3 text-right ${activeDeviceId === row.original.deviceId ? "bg-blue-50" : "bg-white group-hover:bg-slate-50"}`}>
                 <div className="flex items-center justify-end gap-1">
                   <Button
                     variant="ghost"
@@ -319,10 +347,32 @@ function DeviceTable({ table }: DeviceListProps) {
                   >
                     <TrashIcon />
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    aria-label={`View assets for ${row.original.deviceId}`}
+                    title="View device assets"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      navigate(`/devices/${encodeURIComponent(row.original.deviceId)}/assets`);
+                    }}
+                  >
+                    <ServerStackIcon aria-hidden="true" />
+                  </Button>
                   <ChevronRightIcon className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </div>
               </TableCell>
             </TableRow>
+            {expandedDeviceIds.has(row.original.deviceId) && (
+              <TableRow id={`device-details-${encodeURIComponent(row.original.deviceId)}`} className="bg-gray-50/60 hover:bg-gray-50/60">
+                <TableCell colSpan={table.getVisibleLeafColumns().length + 2} className="whitespace-normal p-0">
+                  <DeviceRowDetails device={row.original} />
+                </TableCell>
+              </TableRow>
+            )}
+            </Fragment>
           ))}
         </TableBody>
       </Table>
