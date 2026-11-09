@@ -22,6 +22,7 @@ export default function Page({ deviceId }: props) {
   const setScanDefinition = useScanDefinitionStore(s => s.setScanDefinition)
   const [metaReady, setMetaReady] = useState(isMetaLoaded());
   const [_metaError, setMetaError] = useState<string | null>(null);
+  const [dismissedModuleDeviceId, setDismissedModuleDeviceId] = useState<string | null>(null);
 
   if (!deviceId) {
     throw Error("NO DEVICE ID")
@@ -65,9 +66,12 @@ useEffect(() => {
     }
   }, [])
 
-  if (isMissingRequiredModule) {
+  if (isMissingRequiredModule && dismissedModuleDeviceId !== deviceId) {
     return (
-      <MissingModulePanel moduleName={NETWORK_DISCOVER_MODULE_NAME} />
+      <MissingModulePanel
+        moduleName={NETWORK_DISCOVER_MODULE_NAME}
+        onDismiss={() => setDismissedModuleDeviceId(deviceId)}
+      />
     )
   }
 

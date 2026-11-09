@@ -1,4 +1,8 @@
 import { useEffect, useState } from "react";
+import { TrashIcon } from "@heroicons/react/24/outline";
+import { usePermissions } from "@/features/authorization/permissions/use-permissions";
+import { useDeviceCreatePermission } from "@/features/authorization/permissions/use-device-create-permission";
+import { PERMISSION_KEYS } from "@/features/authorization/permissions/permission-keys";
 import { WaterLoader } from "@/components/ui/water-loader";
 import { edgeConfigApi } from "@/api/edgeConfig/edgeConfigApi";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,6 +21,7 @@ function Message({ kind, children }: { kind: "error" | "success"; children: Reac
 
 // ─── Create Device Dialog ─────────────────────────────────────────────────────
 export default function DeviceManageDialog() {
+  const { hasPermission } = useDeviceCreatePermission();
   const [open, setOpen] = useState(false);
   const [deviceId, setDeviceId] = useState("");
   const [authType, setAuthType] = useState("sas");
@@ -85,6 +90,8 @@ export default function DeviceManageDialog() {
       );
     } finally { setLoading(false); }
   };
+
+  if (!hasPermission) return null;
 
   return (
     <>
@@ -186,6 +193,30 @@ export default function DeviceManageDialog() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </>
+  );
+}
+
+export function DeleteDeviceButton({ deviceId, onDelete }: { deviceId: string; onDelete: () => void }) {
+  const { hasPermission } = usePermissions({ deviceId, permissionKey: PERMISSION_KEYS.DEVICE_DELETE });
+
+  if (!hasPermission) return null;
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={(event) => {
+          event.stopPropagation();
+          onDelete();
+        }}
+        className="h-8 w-8 text-muted-foreground opacity-0 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+        title="Delete device"
+        aria-label={`Delete device ${deviceId}`}
+      >
+        <TrashIcon />
+      </Button>
     </>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Badge from "../../components/Typography/Badge";
 import { useNavigate, useParams } from "react-router-dom";
-import { ChevronRightIcon, CpuChipIcon, MagnifyingGlassIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { ChevronRightIcon, CpuChipIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import {
   Table,
   TableBody,
@@ -32,8 +32,7 @@ import { formatMetadataValue } from "@/features/PlatformTypes/FieldValueInput";
 import useDeviceTableColumnsStore, { defaultFieldVisible } from "@/features/PlatformTypes/deviceTableColumnsStore";
 import { DeviceDataDisplay, DeviceListProps } from "./Devices.types";
 import { DeviceCards } from "./DeviceCards";
-import DeviceManageDialog, { DeleteDeviceDialog } from "./DeviceManageDialog";
-import { Button } from "@/components/ui/button";
+import DeviceManageDialog, { DeleteDeviceButton, DeleteDeviceDialog } from "./DeviceManageDialog";
 import { ErrorState, LoadingState } from "@/components/ui/page-state";
 import { getErrorMessage } from "@/lib/errors";
 
@@ -306,19 +305,7 @@ function DeviceTable({ table }: DeviceListProps) {
               ))}
               <TableCell className="py-3 text-right">
                 <div className="flex items-center justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteTargetId(row.original.deviceId);
-                    }}
-                    className="h-8 w-8 text-muted-foreground opacity-0 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
-                    title="Delete device"
-                    aria-label={`Delete device ${row.original.deviceId}`}
-                  >
-                    <TrashIcon />
-                  </Button>
+                  <DeleteDeviceButton deviceId={row.original.deviceId} onDelete={() => setDeleteTargetId(row.original.deviceId)} />
                   <ChevronRightIcon className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </div>
               </TableCell>

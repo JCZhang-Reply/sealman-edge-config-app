@@ -1,6 +1,8 @@
 export const PERMISSION_KEYS = {
   PLATFORM_AUTHORIZATION_READ: "platform.authorization.read",
   PLATFORM_AUTHORIZATION_WRITE: "platform.authorization.write",
+  PLATFORM_CONFIG_READ: "platform.config.read",
+  PLATFORM_CONFIG_WRITE: "platform.config.write",
   DEVICE_DEPLOYMENT_WRITE: "device.deployment.write",
   DEVICE_LINE_WRITE: "device.line.write",
   DEVICE_MODULE_EXECUTE_METHOD: "device.module.execute_method",
@@ -11,6 +13,8 @@ export const PERMISSION_KEYS = {
   DEVICE_PASSWORD_READ: "device.password.read",
   DEVICE_PASSWORD_WRITE: "device.password.write",
   DEVICE_READ: "device.read",
+  DEVICE_CREATE: "device.create",
+  DEVICE_DELETE: "device.delete",
   DEVICE_METADATA_WRITE: "device.metadata.write",
   DEVICE_ENDPOINT_READ: "device.endpoint.read",
   DEVICE_ENDPOINT_WRITE: "device.endpoint.write",
