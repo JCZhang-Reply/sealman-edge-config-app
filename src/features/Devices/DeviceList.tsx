@@ -29,7 +29,6 @@ import useDeviceStore from "./deviceStore";
 import useGetDevices from "@/generated/edge-administration/hooks/useGetDevices/useGetDevices";
 import useDeviceMetadataFields from "@/features/PlatformTypes/useDeviceMetadataFields";
 import { formatMetadataValue } from "@/features/PlatformTypes/FieldValueInput";
-import useDeviceTableColumnsStore, { defaultFieldVisible } from "@/features/PlatformTypes/deviceTableColumnsStore";
 import { DeviceDataDisplay, DeviceListProps } from "./Devices.types";
 import { DeviceCards } from "./DeviceCards";
 import DeviceManageDialog, { DeleteDeviceDialog } from "./DeviceManageDialog";
@@ -110,7 +109,6 @@ export default function DeviceList() {
 
   const { isLoading, isError, data, error } = useGetDevices();
   const { fields: metadataFields } = useDeviceMetadataFields();
-  const columnVisibilityOverrides = useDeviceTableColumnsStore((s) => s.overrides);
 
   const tableData = useMemo<DeviceDataDisplay[]>(
     () => formatDataForTable(data as DeviceData[]),
@@ -118,8 +116,8 @@ export default function DeviceList() {
   );
 
   // Metadata columns are just the customizable display in the table - which fields show up
-  // there is controlled by Asset Configuration → Devices Table Columns. Search itself is
-  // scoped separately, below, to every metadata key a device has (see metadataSearchIndexColumn).
+  // there is controlled by each default device type field's show_in_list setting. Search itself
+  // is scoped separately, below, to every metadata key a device has (see metadataSearchIndexColumn).
   const columns = useMemo<ColumnDef<DeviceDataDisplay, any>[]>(() => {
     const metadataColumns = metadataFields.map(([key, field]) =>
       columnHelper.accessor((row) => formatMetadataValue(row.deviceMetadata[key]?.value, field), {
@@ -144,11 +142,11 @@ export default function DeviceList() {
 
   const columnVisibility = useMemo(() => {
     const visibility: Record<string, boolean> = { iotEdgeRuntime: false, metadataSearchIndex: false };
-    for (const [key] of metadataFields) {
-      visibility[`meta:${key}`] = columnVisibilityOverrides[key] ?? defaultFieldVisible(key);
+    for (const [key, field] of metadataFields) {
+      visibility[`meta:${key}`] = field.show_in_list !== false;
     }
     return visibility;
-  }, [metadataFields, columnVisibilityOverrides]);
+  }, [metadataFields]);
 
   const table = useReactTable({
     data: tableData,

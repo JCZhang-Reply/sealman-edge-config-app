@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import PageTitle from "@/components/Typography/PageTitle";
 import TypesManager from "@/features/PlatformTypes/TypesManager";
-import DeviceTableColumnsCard from "@/features/PlatformTypes/DeviceTableColumnsCard";
 import DefaultScanPortsCard from "@/features/PlatformTypes/DefaultScanPortsCard";
 import ExtensionOutlet from "@/features/Extensions/outlets/ExtensionOutlet";
 import { useOutletUser } from "@/features/Extensions/outlets/useOutletUser";
@@ -18,6 +17,8 @@ import { usePostServiceType } from "@/generated/edge-administration/hooks/servic
 import { useUpdateServiceType } from "@/generated/edge-administration/hooks/service_types/useUpdateServiceType";
 import { useDeleteServiceType } from "@/generated/edge-administration/hooks/service_types/useDeleteServiceType";
 import { listRegisteredBrowsers } from "@/lib/browserRegistry";
+import { PERMISSION_KEYS } from "@/features/authorization/permissions/permission-keys";
+import { usePermissions } from "@/features/authorization/permissions/use-permissions";
 import {
   ENDPOINT_ROLE_OPTIONS,
   ENDPOINT_TYPE_DEFAULT_FIELDS,
@@ -29,6 +30,7 @@ import {
 
 export default function PlatformTypesSettings() {
   const user = useOutletUser();
+  const { hasPermission: canWrite } = usePermissions({ permissionKey: PERMISSION_KEYS.PLATFORM_CONFIG_WRITE });
   const deviceTypesQuery = useGetDeviceTypes();
   const { postDeviceType } = usePostDeviceType();
   const { updateDeviceType } = useUpdateDeviceType();
@@ -67,7 +69,9 @@ export default function PlatformTypesSettings() {
           types={deviceTypesQuery.data ?? []}
           isLoading={deviceTypesQuery.isLoading}
           defaultFields={defaultDeviceTypeFields}
+          supportsListVisibility
           protectedTypeId="default"
+          canWrite={canWrite}
           onCreate={async (body) => {
             await postDeviceType(body);
             await deviceTypesQuery.refetch();
@@ -82,8 +86,6 @@ export default function PlatformTypesSettings() {
           }}
         />
 
-        <DeviceTableColumnsCard />
-
         <TypesManager
           title="Endpoint Types"
           singularLabel="Endpoint Type"
@@ -95,6 +97,7 @@ export default function PlatformTypesSettings() {
           roleOptions={ENDPOINT_ROLE_OPTIONS}
           supportsListVisibility
           cascadeDelete={{ instancesLabel: "endpoint" }}
+          canWrite={canWrite}
           onCreate={async (body) => {
             await postEndpointType({ ...body, mapping: body.mapping ?? {} });
             await endpointTypesQuery.refetch();
@@ -120,6 +123,7 @@ export default function PlatformTypesSettings() {
           defaultMapping={SERVICE_TYPE_DEFAULT_MAPPING}
           roleOptions={SERVICE_ROLE_OPTIONS}
           cascadeDelete={{ instancesLabel: "service" }}
+          canWrite={canWrite}
           onCreate={async (body) => {
             await postServiceType({ ...body, mapping: body.mapping ?? {} });
             await serviceTypesQuery.refetch();
@@ -134,10 +138,12 @@ export default function PlatformTypesSettings() {
           }}
         />
 
-        <DefaultScanPortsCard />
+        <DefaultScanPortsCard canWrite={canWrite} />
 
         {/* Extensions contribute their own platform-configuration cards here (e.g. fields they need). */}
-        <ExtensionOutlet target="global" placement="section" context={{ user }} />
+        <div inert={!canWrite} aria-disabled={!canWrite}>
+          <ExtensionOutlet target="global" placement="section" context={{ user }} />
+        </div>
       </div>
     </div>
   );

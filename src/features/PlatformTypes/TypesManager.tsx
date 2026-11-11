@@ -17,6 +17,7 @@ export interface TypesManagerProps {
   description?: string;
   types: TypeRecord[];
   isLoading: boolean;
+  canWrite?: boolean;
   /** When set, the form lets this type be assigned one of these built-in browsers. */
   browserKindOptions?: BrowserKindOption[];
   /** When set, a brand-new type starts pre-populated with these fields instead of a blank row -
@@ -27,8 +28,8 @@ export interface TypesManagerProps {
   defaultMapping?: Record<string, string>;
   /** When set, fields get a Role selector and create/update send `mapping`. */
   roleOptions?: RoleOption[];
-  /** When set, each field row gets a "Show in list" toggle controlling whether its value shows
-   * as extra info in the endpoints list - only meaningful for endpoint types. */
+  /** When set, each field row gets a "Show in list" toggle controlling whether its value appears
+   * in the corresponding device or endpoint list. */
   supportsListVisibility?: boolean;
   /** Type ID that can't be deleted (its delete button is hidden entirely) - used for the
    * "default" device type, which the backend also rejects deleting. */
@@ -75,6 +76,7 @@ export default function TypesManager({
   description,
   types,
   isLoading,
+  canWrite = true,
   browserKindOptions,
   defaultFields,
   defaultMapping,
@@ -160,7 +162,7 @@ export default function TypesManager({
           <h3 className="text-lg font-semibold">{title}</h3>
           {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
         </div>
-        <Button type="button" variant="outline" onClick={openAdd} className="shrink-0">
+        <Button type="button" variant="outline" onClick={openAdd} disabled={!canWrite} title={!canWrite ? "Requires platform.config.write" : undefined} className="shrink-0">
           <PlusIcon />
           Add {singularLabel.toLowerCase()}
         </Button>
@@ -206,6 +208,8 @@ export default function TypesManager({
                         variant="ghost"
                         size="icon"
                         onClick={() => openEdit(type)}
+                        disabled={!canWrite}
+                        title={!canWrite ? "Requires platform.config.write" : `Edit ${type.label}`}
                         aria-label={`Edit ${type.label}`}
                       >
                         <PencilSquareIcon />
@@ -216,6 +220,8 @@ export default function TypesManager({
                           size="icon"
                           className="text-destructive hover:text-destructive"
                           onClick={() => setPendingDelete(type)}
+                          disabled={!canWrite}
+                          title={!canWrite ? "Requires platform.config.write" : `Delete ${type.label}`}
                           aria-label={`Delete ${type.label}`}
                         >
                           <TrashIcon />
@@ -230,7 +236,7 @@ export default function TypesManager({
         </table>
       </div>
 
-      <TypeFormDialog
+      {canWrite && <TypeFormDialog
         isOpen={dialogState.open}
         onClose={closeDialog}
         onSubmit={handleSubmit}
@@ -242,9 +248,9 @@ export default function TypesManager({
         defaultMapping={defaultMapping}
         roleOptions={roleOptions}
         supportsListVisibility={supportsListVisibility}
-      />
+      />}
 
-      <SimpleDialog
+      {canWrite && <SimpleDialog
         isOpen={pendingDelete !== null}
         title={pendingDelete ? `Delete ${singularLabel.toLowerCase()} "${pendingDelete.label}"` : ""}
       >
@@ -293,7 +299,7 @@ export default function TypesManager({
             </Button>
           </div>
         </div>
-      </SimpleDialog>
+      </SimpleDialog>}
     </div>
   );
 }

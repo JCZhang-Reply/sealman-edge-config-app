@@ -62,8 +62,8 @@ interface TypeFormDialogProps {
   defaultMapping?: Record<string, string>;
   /** When set, each field row gets a Role selector and the result carries `mapping`. */
   roleOptions?: RoleOption[];
-  /** When set, each field row gets a "Show in list" toggle controlling whether its value shows
-   * as extra info in the endpoints list - only meaningful for endpoint types. */
+  /** When set, each field row gets a "Show in list" toggle controlling whether its value appears
+   * in the corresponding device or endpoint list. */
   supportsListVisibility?: boolean;
 }
 
