@@ -198,8 +198,8 @@ const postInfluxBucketCreate = async (deviceId: string | undefined) => {
   return data;
 }
 
-const getDeviceCreatePermissions = async (signal?: AbortSignal) => {
-  const { data } = await edgeConfigApiInstance.get('/auth/permissions/device-create', { signal });
+const getDeviceManagementPermissions = async (signal?: AbortSignal): Promise<{ can_create: boolean; deletable_device_ids: string[] }> => {
+  const { data } = await edgeConfigApiInstance.get('/auth/permissions/device-management', { signal });
   return data;
 }
 
@@ -412,7 +412,7 @@ export const edgeConfigApi = {
   postInfluxBucketCreate,
   postWebFtpWriteFile,
   getPermissions,
-  getDeviceCreatePermissions,
+  getDeviceManagementPermissions,
   getRoles,
   getRoleDetails,
   deleteRole,

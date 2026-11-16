@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
 import { TrashIcon } from "@heroicons/react/24/outline";
-import { usePermissions } from "@/features/authorization/permissions/use-permissions";
-import { useDeviceCreatePermission } from "@/features/authorization/permissions/use-device-create-permission";
-import { PERMISSION_KEYS } from "@/features/authorization/permissions/permission-keys";
 import { WaterLoader } from "@/components/ui/water-loader";
 import { edgeConfigApi } from "@/api/edgeConfig/edgeConfigApi";
 import { useQueryClient } from "@tanstack/react-query";
@@ -20,8 +17,7 @@ function Message({ kind, children }: { kind: "error" | "success"; children: Reac
 }
 
 // ─── Create Device Dialog ─────────────────────────────────────────────────────
-export default function DeviceManageDialog() {
-  const { hasPermission } = useDeviceCreatePermission();
+export default function DeviceManageDialog({ canCreate }: { canCreate: boolean }) {
   const [open, setOpen] = useState(false);
   const [deviceId, setDeviceId] = useState("");
   const [authType, setAuthType] = useState("sas");
@@ -83,6 +79,7 @@ export default function DeviceManageDialog() {
       );
       setSuccess(`Device "${deviceId}" created successfully.`);
       queryClient.invalidateQueries({ queryKey: ["get", "/devices", "withCountryData"] });
+      queryClient.invalidateQueries({ queryKey: ["permissions", "device-management"] });
     } catch (e: unknown) {
       setError(
         (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
@@ -91,7 +88,7 @@ export default function DeviceManageDialog() {
     } finally { setLoading(false); }
   };
 
-  if (!hasPermission) return null;
+  if (!canCreate) return null;
 
   return (
     <>
@@ -197,10 +194,8 @@ export default function DeviceManageDialog() {
   );
 }
 
-export function DeleteDeviceButton({ deviceId, onDelete }: { deviceId: string; onDelete: () => void }) {
-  const { hasPermission } = usePermissions({ deviceId, permissionKey: PERMISSION_KEYS.DEVICE_DELETE });
-
-  if (!hasPermission) return null;
+export function DeleteDeviceButton({ deviceId, canDelete, onDelete }: { deviceId: string; canDelete: boolean; onDelete: () => void }) {
+  if (!canDelete) return null;
 
   return (
     <>
@@ -234,6 +229,7 @@ export function DeleteDeviceDialog({ deviceId, onClose }: DeleteDeviceDialogProp
     try {
       await edgeConfigApi.deleteDevice(deviceId);
       setSuccess(`Device "${deviceId}" deleted successfully.`);
+      queryClient.invalidateQueries({ queryKey: ["permissions", "device-management"] });
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ["get", "/devices", "withCountryData"] }), 6000);
     } catch (e: unknown) {
       setError(

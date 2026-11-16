@@ -3,6 +3,8 @@ import PageTitle from "@/components/Typography/PageTitle";
 import TypesManager from "@/features/PlatformTypes/TypesManager";
 import DeviceTableColumnsCard from "@/features/PlatformTypes/DeviceTableColumnsCard";
 import DefaultScanPortsCard from "@/features/PlatformTypes/DefaultScanPortsCard";
+import { PERMISSION_KEYS } from "@/features/authorization/permissions/permission-keys";
+import { usePermissions } from "@/features/authorization/permissions/use-permissions";
 import ExtensionOutlet from "@/features/Extensions/outlets/ExtensionOutlet";
 import { useOutletUser } from "@/features/Extensions/outlets/useOutletUser";
 import useGetDeviceTypes from "@/generated/edge-administration/hooks/device_types/useGetDeviceTypes";
@@ -29,6 +31,10 @@ import {
 
 export default function PlatformTypesSettings() {
   const user = useOutletUser();
+  const { hasPermission: canWrite, isLoading: isWritePermissionLoading } = usePermissions({
+    permissionKey: PERMISSION_KEYS.PLATFORM_ASSET_CONFIG_WRITE,
+  });
+  const canEdit = canWrite && !isWritePermissionLoading;
   const deviceTypesQuery = useGetDeviceTypes();
   const { postDeviceType } = usePostDeviceType();
   const { updateDeviceType } = useUpdateDeviceType();
@@ -66,6 +72,7 @@ export default function PlatformTypesSettings() {
           description="Types available when creating devices."
           types={deviceTypesQuery.data ?? []}
           isLoading={deviceTypesQuery.isLoading}
+          canEdit={canEdit}
           defaultFields={defaultDeviceTypeFields}
           protectedTypeId="default"
           onCreate={async (body) => {
@@ -82,7 +89,7 @@ export default function PlatformTypesSettings() {
           }}
         />
 
-        <DeviceTableColumnsCard />
+        <DeviceTableColumnsCard canEdit={canEdit} />
 
         <TypesManager
           title="Endpoint Types"
@@ -90,6 +97,7 @@ export default function PlatformTypesSettings() {
           description="Types available when creating endpoints on a device."
           types={endpointTypesQuery.data ?? []}
           isLoading={endpointTypesQuery.isLoading}
+          canEdit={canEdit}
           defaultFields={ENDPOINT_TYPE_DEFAULT_FIELDS}
           defaultMapping={ENDPOINT_TYPE_DEFAULT_MAPPING}
           roleOptions={ENDPOINT_ROLE_OPTIONS}
@@ -115,6 +123,7 @@ export default function PlatformTypesSettings() {
           description="Types available when creating services on an endpoint."
           types={serviceTypesQuery.data ?? []}
           isLoading={serviceTypesQuery.isLoading}
+          canEdit={canEdit}
           browserKindOptions={listRegisteredBrowsers()}
           defaultFields={SERVICE_TYPE_DEFAULT_FIELDS}
           defaultMapping={SERVICE_TYPE_DEFAULT_MAPPING}
@@ -134,7 +143,7 @@ export default function PlatformTypesSettings() {
           }}
         />
 
-        <DefaultScanPortsCard />
+        <DefaultScanPortsCard canEdit={canEdit} />
 
         {/* Extensions contribute their own platform-configuration cards here (e.g. fields they need). */}
         <ExtensionOutlet target="global" placement="section" context={{ user }} />

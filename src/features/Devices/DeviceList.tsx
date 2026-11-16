@@ -33,6 +33,7 @@ import useDeviceTableColumnsStore, { defaultFieldVisible } from "@/features/Plat
 import { DeviceDataDisplay, DeviceListProps } from "./Devices.types";
 import { DeviceCards } from "./DeviceCards";
 import DeviceManageDialog, { DeleteDeviceButton, DeleteDeviceDialog } from "./DeviceManageDialog";
+import { useDeviceManagementPermissions } from "@/features/authorization/permissions/use-device-management-permissions";
 import { ErrorState, LoadingState } from "@/components/ui/page-state";
 import { getErrorMessage } from "@/lib/errors";
 
@@ -115,6 +116,8 @@ export default function DeviceList() {
     () => formatDataForTable(data as DeviceData[]),
     [data],
   );
+  const permissions = useDeviceManagementPermissions(!isLoading && !isError && data !== undefined);
+  const deletableDevices = useMemo(() => new Set(permissions?.deletable_device_ids ?? []), [permissions]);
 
   // Metadata columns are just the customizable display in the table - which fields show up
   // there is controlled by Asset Configuration → Devices Table Columns. Search itself is
@@ -239,10 +242,10 @@ export default function DeviceList() {
                   className="pl-9"
                 />
               </div>
-              <DeviceManageDialog />
+              <DeviceManageDialog canCreate={permissions?.can_create ?? false} />
             </div>
           </div>
-          <DeviceTable table={table} />
+          <DeviceTable table={table} deletableDevices={deletableDevices} />
         </div>
       </div>
       <div className="block @2xl:hidden">
@@ -250,13 +253,14 @@ export default function DeviceList() {
           table={table}
           globalFilter={globalFilter}
           data={tableData}
+          canCreate={permissions?.can_create ?? false}
         />
       </div>
     </div>
   );
 }
 
-function DeviceTable({ table }: DeviceListProps) {
+function DeviceTable({ table, deletableDevices }: DeviceListProps & { deletableDevices: Set<string> }) {
   const navigate = useNavigate();
   const { deviceId: activeDeviceId } = useParams();
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -305,7 +309,11 @@ function DeviceTable({ table }: DeviceListProps) {
               ))}
               <TableCell className="py-3 text-right">
                 <div className="flex items-center justify-end gap-1">
-                  <DeleteDeviceButton deviceId={row.original.deviceId} onDelete={() => setDeleteTargetId(row.original.deviceId)} />
+                  <DeleteDeviceButton
+                    deviceId={row.original.deviceId}
+                    canDelete={deletableDevices.has(row.original.deviceId)}
+                    onDelete={() => setDeleteTargetId(row.original.deviceId)}
+                  />
                   <ChevronRightIcon className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </div>
               </TableCell>

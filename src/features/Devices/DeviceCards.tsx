@@ -9,6 +9,7 @@ export function DeviceCards({
   table,
   globalFilter,
   data,
+  canCreate,
 }: DeviceCardsProps) {
   const navigate = useNavigate();
   const { deviceId } = useParams();
@@ -46,7 +47,7 @@ export function DeviceCards({
             totalRows={data.length}
             filteredRows={table.getRowModel().rows.length}
           />
-          <DeviceManageDialog />
+          <DeviceManageDialog canCreate={canCreate} />
         </div>
 
         <DebouncedInput

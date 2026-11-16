@@ -20,6 +20,7 @@ import PresetTemplateVariablesSettings from "./pages/settings/PresetTemplateVari
 import { DeviceTemplateVariablesSection, IOTEDGE_AGENT_VARIABLES, IOTEDGE_REGISTRY_VARIABLES, SEALMAN_EMS_VARIABLES } from "./pages/settings/TemplatesSettings";
 import DeploymentsLayout from "./pages/deployments/DeploymentsLayout";
 import AssetConfigurationLayout from "./pages/assetConfiguration/AssetConfigurationLayout";
+import AssetConfigurationAccess from "./pages/assetConfiguration/AssetConfigurationAccess";
 import { SmartEmsAuthCallback } from "./features/Devices/Network/smart_ems/pages/AuthCallback";
 import ExtensionsSettings from "./features/Extensions/ExtensionsSettings";
 import ExtensionDetail from "./features/Extensions/ExtensionDetail";
@@ -84,10 +85,12 @@ export default function App() {
               <Route path=":deviceId/*" element={<DeviceDetail />} />
             </Route>
 
-            <Route path="platform-types" element={<AssetConfigurationLayout />}>
-              <Route index element={<Navigate to="asset-types" replace />} />
-              <Route path="asset-types" element={<PlatformTypesSettings />} />
-              <Route path="templates" element={<Navigate to="/settings/sealman-ems" replace />} />
+            <Route element={<AssetConfigurationAccess />}>
+              <Route path="platform-types" element={<AssetConfigurationLayout />}>
+                <Route index element={<Navigate to="asset-types" replace />} />
+                <Route path="asset-types" element={<PlatformTypesSettings />} />
+                <Route path="templates" element={<Navigate to="/settings/sealman-ems" replace />} />
+              </Route>
             </Route>
             <Route path="deployments" element={<DeploymentsLayout />}>
               <Route index element={<Navigate to="management" replace />} />

@@ -35,6 +35,12 @@ export default function SideNavigation() {
   } = usePermissions({
     permissionKey: PERMISSION_KEYS.PLATFORM_CONFIG_READ,
   });
+  const {
+    hasPermission: hasAssetConfigReadPermission,
+    isLoading: isAssetConfigPermissionsLoading,
+  } = usePermissions({
+    permissionKey: PERMISSION_KEYS.PLATFORM_ASSET_CONFIG_READ,
+  });
 
   const user = useOutletUser();
   const extensionPages = useNavContributions("global", "page", { user });
@@ -45,7 +51,7 @@ export default function SideNavigation() {
       { name: "Devices", href: "/devices", icon: CpuChipIcon, separatorAfter: true },
     ];
 
-    if (!isPlatformConfigPermissionsLoading && hasPlatformConfigReadPermission) {
+    if (!isAssetConfigPermissionsLoading && hasAssetConfigReadPermission) {
       items.push({ name: "Asset Configuration", href: "/platform-types", icon: Squares2X2Icon });
     }
 
@@ -73,8 +79,10 @@ export default function SideNavigation() {
     return items;
   }, [
     hasAuthorizationReadPermission,
+    hasAssetConfigReadPermission,
     hasPlatformConfigReadPermission,
     isAuthPermissionsLoading,
+    isAssetConfigPermissionsLoading,
     isPlatformConfigPermissionsLoading,
     extensionPages,
   ]);
