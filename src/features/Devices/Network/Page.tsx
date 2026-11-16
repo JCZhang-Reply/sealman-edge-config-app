@@ -1,19 +1,13 @@
 import useGetModuleTwinConfig from "@/generated/edge-administration/hooks/useGetModuleTwinConfig";
 import { NetworkDiscoverTwinConfig } from "@/api/edgeConfig/networkDiscover/networkDiscoverInterfaces";
 import { NETWORK_DISCOVER_MODULE_NAME } from "@/api/edgeConfig/moduleNames";
-import { ApiError } from "@/generated/edge-administration/api";
 import { useEffect , useState } from "react";
 import { useNetworkPageStore, useScanDefinitionStore, useTwinConfigStore } from "./stores";
 import { NetworkMainLayout } from "@/features/Devices/Network/layouts";
 import { loadNetworkMeta , isMetaLoaded } from "./api/networkMeta"
-import { MissingModulePanel } from "./MissingModulePanel";
 
 interface props {
   deviceId: string
-}
-
-function isModuleNotDeployedError(error: unknown): error is ApiError {
-  return error instanceof ApiError && error.statusCode === 404;
 }
 
 export default function Page({ deviceId }: props) {
@@ -22,7 +16,6 @@ export default function Page({ deviceId }: props) {
   const setScanDefinition = useScanDefinitionStore(s => s.setScanDefinition)
   const [metaReady, setMetaReady] = useState(isMetaLoaded());
   const [_metaError, setMetaError] = useState<string | null>(null);
-  const [dismissedModuleDeviceId, setDismissedModuleDeviceId] = useState<string | null>(null);
 
   if (!deviceId) {
     throw Error("NO DEVICE ID")
@@ -30,8 +23,8 @@ export default function Page({ deviceId }: props) {
 
   setDeviceId(deviceId)
 
-  const { data, isError, error } = useGetModuleTwinConfig(deviceId, NETWORK_DISCOVER_MODULE_NAME)
-  const isMissingRequiredModule = isError && isModuleNotDeployedError(error)
+  // seal-app-net-discover is optional: without it assets are still manageable, only scan/online states are missing.
+  const { data } = useGetModuleTwinConfig(deviceId, NETWORK_DISCOVER_MODULE_NAME)
 
   useEffect(() => {
   async function bootstrap() {
@@ -65,15 +58,6 @@ useEffect(() => {
       useScanDefinitionStore.setState(useScanDefinitionStore.getInitialState())
     }
   }, [])
-
-  if (isMissingRequiredModule && dismissedModuleDeviceId !== deviceId) {
-    return (
-      <MissingModulePanel
-        moduleName={NETWORK_DISCOVER_MODULE_NAME}
-        onDismiss={() => setDismissedModuleDeviceId(deviceId)}
-      />
-    )
-  }
 
   // Render immediately rather than blocking on the twin config / network meta fetches -
   // Overview (the default view) doesn't need either, and legacy views that do (the sidebar's

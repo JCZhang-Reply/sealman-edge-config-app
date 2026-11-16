@@ -88,7 +88,7 @@ export default function SideNavigation() {
   ]);
 
   return (
-    <aside className="flex h-full w-16 shrink-0 flex-col bg-[#0f1f47] lg:w-60">
+    <aside className="flex h-full w-16 shrink-0 flex-col bg-nav lg:w-60">
       <nav aria-label="Main navigation" className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
         {navigation.map((item) => (
           <Fragment key={item.href}>
@@ -99,7 +99,7 @@ export default function SideNavigation() {
               title={item.name}
               className={({ isActive }) =>
                 `flex items-center justify-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors lg:justify-start ${
-                  isActive ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"
+                  isActive ? "bg-nav-active text-nav-active-foreground" : "text-nav-foreground hover:bg-white/10 hover:text-white"
                 }`
               }
             >

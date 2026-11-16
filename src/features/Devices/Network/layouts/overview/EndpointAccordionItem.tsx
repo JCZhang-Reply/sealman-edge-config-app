@@ -7,6 +7,7 @@ import { MappedEndpoint, MappedPort } from "@/generated/edge-administration/hook
 import { EndpointDialogs, EndpointIdentity, EndpointPrimaryAction, PortActions, } from "./endpointShared";
 import { BrowseTarget, portNeedsAssignment, useEndpointDisplay } from "./endpointLogic";
 import { endpointListKey, portListKey } from "./overviewMerge";
+import { useShowConnectionState } from "./connectionStateContext";
 
 interface props {
   endpoint: MappedEndpoint;
@@ -18,6 +19,7 @@ interface props {
 
 export default function EndpointAccordionItem({ endpoint, deviceId, onCreated, onOpenDetails, onOpenServiceDetails }: props) {
   const display = useEndpointDisplay(endpoint);
+  const showState = useShowConnectionState();
   const { needsAssignment, isConfigured } = display;
   const [assignEndpointOpen, setAssignEndpointOpen] = useState(false);
   const [assignPort, setAssignPort] = useState<MappedPort | null>(null);
@@ -31,7 +33,7 @@ export default function EndpointAccordionItem({ endpoint, deviceId, onCreated, o
             <div className="flex items-center justify-between w-full gap-4">
               <EndpointIdentity display={display} />
               <div className="flex items-center gap-3 shrink-0">
-                <EndpointStatus value={endpoint.status} type="icon" />
+                {showState && <EndpointStatus value={endpoint.status} type="icon" />}
               </div>
             </div>
           </AccordionTrigger>
@@ -53,10 +55,10 @@ export default function EndpointAccordionItem({ endpoint, deviceId, onCreated, o
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[100px]">Status</TableHead>
+                {showState && <TableHead className="w-[100px]">Status</TableHead>}
                 <TableHead className="w-[100px]">Port</TableHead>
                 <TableHead>Service</TableHead>
-                <TableHead>Last status change</TableHead>
+                {showState && <TableHead>Last status change</TableHead>}
                 <TableHead className="text-right"></TableHead>
               </TableRow>
             </TableHeader>
@@ -72,9 +74,11 @@ export default function EndpointAccordionItem({ endpoint, deviceId, onCreated, o
                   className={[needsPortAssignment ? "bg-amber-50" : "", serviceId ? "cursor-pointer hover:bg-muted/40" : ""].join(" ")}
                   onClick={serviceId ? () => onOpenServiceDetails(serviceId) : undefined}
                 >
-                  <TableCell>
-                    <EndpointStatus value={port.status} type="text" />
-                  </TableCell>
+                  {showState && (
+                    <TableCell>
+                      <EndpointStatus value={port.status} type="text" />
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Port value={port.port != null ? port.port.toString() : "-"} />
                   </TableCell>
@@ -90,9 +94,11 @@ export default function EndpointAccordionItem({ endpoint, deviceId, onCreated, o
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <LastStatusChange date={port.lastStatusChange ?? undefined} variant="outline" />
-                  </TableCell>
+                  {showState && (
+                    <TableCell>
+                      <LastStatusChange date={port.lastStatusChange ?? undefined} variant="outline" />
+                    </TableCell>
+                  )}
                   <TableCell className="text-right">
                     <PortActions
                       endpoint={endpoint}
