@@ -7,7 +7,7 @@ import useDeviceTableColumnsStore, { defaultFieldVisible } from "./deviceTableCo
  * columns in the devices table. Every field is on by default, except
  * geo-location-like fields which default to off.
  */
-export default function DeviceTableColumnsCard() {
+export default function DeviceTableColumnsCard({ canEdit = true }: { canEdit?: boolean }) {
   const { fields, isLoading } = useDeviceMetadataFields();
   const overrides = useDeviceTableColumnsStore((s) => s.overrides);
   const setFieldVisible = useDeviceTableColumnsStore((s) => s.setFieldVisible);
@@ -38,6 +38,7 @@ export default function DeviceTableColumnsCard() {
               </div>
               <Toggle
                 checked={overrides[key] ?? defaultFieldVisible(key)}
+                disabled={!canEdit}
                 onChange={(visible) => setFieldVisible(key, visible)}
               />
             </div>
