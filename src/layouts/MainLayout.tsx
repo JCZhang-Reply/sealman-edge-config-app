@@ -1,6 +1,5 @@
 import SideNavigation from "../components/Navigation/SideNavigation";
 import AppHeader from "../components/Navigation/AppHeader";
-import AppFooter from "../components/Navigation/AppFooter";
 import { Outlet } from "react-router-dom";
 
 export default function MainLayout() {
@@ -13,7 +12,6 @@ export default function MainLayout() {
           <Outlet />
         </main>
       </div>
-      <AppFooter />
     </div>
   );
 }

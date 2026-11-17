@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import PageTitle from "@/components/Typography/PageTitle";
 import TypesManager from "@/features/PlatformTypes/TypesManager";
 import DeviceTableColumnsCard from "@/features/PlatformTypes/DeviceTableColumnsCard";
@@ -60,15 +60,23 @@ export default function PlatformTypesSettings() {
   const { deleteServiceType } = useDeleteServiceType();
 
   const networkScanEnabled = useNetworkScanEnabled() === true;
+  const [activeTab, setActiveTab] = useState<"device" | "service" | "endpoint">("device");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 pb-4">
       <PageTitle
         title="Asset Configuration"
         description="Define the device, endpoint and service types available on the platform, and the fields captured for each."
       />
 
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-background p-2" role="tablist" aria-label="Asset modelling sections">
+        <button type="button" role="tab" aria-selected={activeTab === "device"} onClick={() => setActiveTab("device")} className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${activeTab === "device" ? "bg-blue-100 text-blue-700" : "text-muted-foreground hover:bg-muted"}`}>Device Types</button>
+        <button type="button" role="tab" aria-selected={activeTab === "service"} onClick={() => setActiveTab("service")} className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${activeTab === "service" ? "bg-blue-100 text-blue-700" : "text-muted-foreground hover:bg-muted"}`}>Service Type</button>
+        <button type="button" role="tab" aria-selected={activeTab === "endpoint"} onClick={() => setActiveTab("endpoint")} className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${activeTab === "endpoint" ? "bg-blue-100 text-blue-700" : "text-muted-foreground hover:bg-muted"}`}>Endpoint Types</button>
+      </div>
+
       <div className="flex flex-col gap-6">
+        {activeTab === "device" && <>
         <TypesManager
           title="Device Types"
           singularLabel="Device Type"
@@ -93,7 +101,9 @@ export default function PlatformTypesSettings() {
         />
 
         <DeviceTableColumnsCard canEdit={canEdit} />
+         </>}
 
+        {activeTab === "endpoint" && <>
         <TypesManager
           title="Endpoint Types"
           singularLabel="Endpoint Type"
@@ -120,6 +130,10 @@ export default function PlatformTypesSettings() {
           }}
         />
 
+
+        </>}
+
+        {activeTab === "service" && <>
         <TypesManager
           title="Service Types"
           singularLabel="Service Type"
@@ -147,6 +161,8 @@ export default function PlatformTypesSettings() {
         />
 
   {networkScanEnabled && <DefaultScanPortsCard canEdit={canEdit} />}
+        <DefaultScanPortsCard />
+        </>}
 
         {/* Extensions contribute their own platform-configuration cards here (e.g. fields they need). */}
         <ExtensionOutlet target="global" placement="section" context={{ user }} />

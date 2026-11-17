@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Badge from "../../components/Typography/Badge";
 import { useNavigate, useParams } from "react-router-dom";
-import { ChevronRightIcon, CpuChipIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon, ChevronRightIcon, CpuChipIcon, TrashIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import {
   Table,
   TableBody,
@@ -22,10 +22,13 @@ import {
   ColumnDef,
 } from "@tanstack/react-table";
 import { DeviceData } from "../../api/edgeConfig/edgeConfigApiHooks";
-import DevicesHeader, { DeviceOnlineFilterStatus } from "./DevicesHeader";
-import DebouncedInput from "../../components/Input/DebouncedInput";
+import { DeviceOnlineFilterStatus } from "./DevicesHeader";
+import DevicesToolbar from "./DevicesToolbar";
 import FilterDetails from "./FilterDetails";
 import useDeviceStore from "./deviceStore";
+import ColumnValueFilter from "./DeviceSearch/ColumnValueFilter";
+import DeviceMatchList from "./DeviceSearch/DeviceMatchList";
+import useDeviceSearch, { DeviceSearchState } from "./DeviceSearch/useDeviceSearch";
 import useGetDevices from "@/generated/edge-administration/hooks/useGetDevices/useGetDevices";
 import useDeviceMetadataFields from "@/features/PlatformTypes/useDeviceMetadataFields";
 import { formatMetadataValue } from "@/features/PlatformTypes/FieldValueInput";
@@ -47,6 +50,9 @@ function formatDataForTable(data: DeviceData[] | undefined): DeviceDataDisplay[]
 }
 
 const columnHelper = createColumnHelper<DeviceDataDisplay>();
+
+// ids of the per-field metadata columns are "meta:<field key>"
+const METADATA_COLUMN_PREFIX = "meta:";
 
 const baseColumns: ColumnDef<DeviceDataDisplay, any>[] = [
   columnHelper.accessor("onlineStatusEdge", {
@@ -103,19 +109,25 @@ export default function DeviceList() {
     );
   };
 
+  const clearSearchFilters = useDeviceStore.use.clearSearchFilters();
+  const search = useDeviceSearch();
+
   useEffect(() => {
     setGlobalFilter("");
     setColumnFiltersStore([]);
-  }, [setColumnFiltersStore, setGlobalFilter]);
+    clearSearchFilters();
+  }, [setColumnFiltersStore, setGlobalFilter, clearSearchFilters]);
 
   const { isLoading, isError, data, error } = useGetDevices();
   const { fields: metadataFields } = useDeviceMetadataFields();
   const columnVisibilityOverrides = useDeviceTableColumnsStore((s) => s.overrides);
 
-  const tableData = useMemo<DeviceDataDisplay[]>(
-    () => formatDataForTable(data as DeviceData[]),
-    [data],
-  );
+  // With search active, the API result set is authoritative for IDs, metadata, endpoints and
+  // services. The status filter then narrows the returned devices.
+  const tableData = useMemo<DeviceDataDisplay[]>(() => {
+    const rows = formatDataForTable(data as DeviceData[]);
+    return search.active ? rows.filter((row) => search.matchesByDevice.has(row.deviceId)) : rows;
+  }, [data, search.active, search.matchesByDevice]);
   const permissions = useDeviceManagementPermissions(!isLoading && !isError && data !== undefined);
   const deletableDevices = useMemo(() => new Set(permissions?.deletable_device_ids ?? []), [permissions]);
 
@@ -157,7 +169,7 @@ export default function DeviceList() {
     columns,
     state: {
       columnFilters,
-      globalFilter,
+      globalFilter: search.active ? "" : globalFilter.trim(),
       columnVisibility,
     },
     defaultColumn: {
@@ -177,7 +189,7 @@ export default function DeviceList() {
   });
 
   const calculateDeviceOnlineFilter = () => {
-    if (columnFilters.length === 1 && columnFilters[0].id === "onlineStatus") {
+    if (columnFilters.length === 1 && columnFilters[0].id === "onlineStatusEdge") {
       return columnFilters[0].value === "online"
         ? DeviceOnlineFilterStatus.Online
         : DeviceOnlineFilterStatus.Offline;
@@ -192,17 +204,13 @@ export default function DeviceList() {
   const filterByStatusFromHeader = (
     deviceOnlineFilterStatus: DeviceOnlineFilterStatus,
   ) => {
-    setGlobalFilter("");
     if (deviceOnlineFilterStatus === DeviceOnlineFilterStatus.All) {
       setColumnFilters([]);
     } else {
       setColumnFilters([
         {
-          id: "iotEdgeRuntime",
-          value:
-            deviceOnlineFilterStatus === DeviceOnlineFilterStatus.Online
-              ? "Connected"
-              : "Disconnected",
+          id: "onlineStatusEdge",
+          value: deviceOnlineFilterStatus === DeviceOnlineFilterStatus.Online ? "online" : "offline",
         },
       ]);
     }
@@ -214,39 +222,31 @@ export default function DeviceList() {
     return <ErrorState title="Could not load the devices" message={getErrorMessage(error)} />;
 
   return (
-    <div className="@container w-full p-4">
-      <div className="hidden @2xl:block">
-        <div className="overflow-hidden rounded-xl border bg-white shadow-xs">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-3">
-            <h1 className="text-lg font-semibold tracking-tight">Devices</h1>
-            <DevicesHeader
-              deviceOnlineFilter={deviceOnlineFilter}
-              setDeviceOnlineFilter={filterByStatusFromHeader}
+    <div className="@container w-full space-y-4 p-4">
+      <DevicesToolbar
+        title="Devices"
+        deviceOnlineFilter={deviceOnlineFilter}
+        setDeviceOnlineFilter={filterByStatusFromHeader}
+      >
+        <div className="flex items-center gap-3">
+          {data && (
+            <FilterDetails
+              totalRows={data.length}
+              filteredRows={table.getRowModel().rows.length}
+              className="items-center"
             />
-            {data && (
-              <FilterDetails
-                totalRows={data.length}
-                filteredRows={table.getRowModel().rows.length}
-                className="items-center"
-              />
-            )}
-            <div className="ml-auto flex items-center gap-3">
-              <div className="relative w-72">
-                <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <DebouncedInput
-                  type="text"
-                  name="filter"
-                  value={globalFilter}
-                  onChange={(value) => table.setGlobalFilter(value as string)}
-                  placeholder="Search device ID or metadata"
-                  className="pl-9"
-                />
-              </div>
-              <DeviceManageDialog canCreate={permissions?.can_create ?? false} />
-            </div>
+
+          )}
+          <div className="ml-auto flex items-center gap-3">
+            <DeviceManageDialog
+              canCreate={permissions?.can_create ?? false}
+            />
           </div>
-          <DeviceTable table={table} deletableDevices={deletableDevices} />
+
         </div>
+      </DevicesToolbar>
+      <div className="hidden @2xl:block overflow-hidden rounded-xl border bg-white shadow-xs">
+        <DeviceTable table={table} search={search} deletableDevices={deletableDevices} />
       </div>
       <div className="block @2xl:hidden">
         <DeviceCards
@@ -254,16 +254,35 @@ export default function DeviceList() {
           globalFilter={globalFilter}
           data={tableData}
           canCreate={permissions?.can_create ?? false}
+          search={search}
         />
       </div>
     </div>
   );
 }
 
-function DeviceTable({ table, deletableDevices }: DeviceListProps & { deletableDevices: Set<string> }) {
+function DeviceTable({ table, search, deletableDevices }: DeviceListProps & { search: DeviceSearchState; deletableDevices: Set<string>; }) {
+  const { fields: metadataFields } = useDeviceMetadataFields();
+  const fieldLabels = useMemo(() => new Map(metadataFields.map(([key, field]) => [key, field.label])), [metadataFields]);
   const navigate = useNavigate();
   const { deviceId: activeDeviceId } = useParams();
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const resultIds = table.getRowModel().rows
+    .map((row) => row.original.deviceId)
+    .filter((id) => (search.matchesByDevice.get(id)?.length ?? 0) > 0);
+  const resultSignature = resultIds.join("|");
+  useEffect(() => {
+    if (search.active && !search.isFetching) setExpandedIds(new Set(resultIds));
+    else if (!search.active) setExpandedIds(new Set());
+    // The signature changes when a new search/filter operation returns a new result set.
+  }, [search.active, search.isFetching, resultSignature]);
+  const toggleExpanded = (id: string) =>
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
 
   return (
     <>
@@ -276,12 +295,17 @@ function DeviceTable({ table, deletableDevices }: DeviceListProps & { deletableD
                   key={header.id}
                   className="h-10 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                 >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
+                  {header.isPlaceholder ? null : (
+                    <span className="inline-flex items-center gap-1">
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.column.id.startsWith(METADATA_COLUMN_PREFIX) && (
+                        <ColumnValueFilter
+                          field={header.column.id.slice(METADATA_COLUMN_PREFIX.length)}
+                          label={fieldLabels.get(header.column.id.slice(METADATA_COLUMN_PREFIX.length)) ?? header.column.id}
+                        />
                       )}
+                    </span>
+                  )}
                 </TableHead>
               ))}
               <TableHead className="w-28" />
@@ -292,33 +316,63 @@ function DeviceTable({ table, deletableDevices }: DeviceListProps & { deletableD
           {table.getRowModel().rows.length === 0 && (
             <TableRow className="hover:bg-transparent">
               <TableCell colSpan={table.getVisibleLeafColumns().length + 1} className="py-12 text-center text-muted-foreground">
-                No devices match the current filter.
+                {search.error
+                  ? `Search failed: ${getErrorMessage(search.error)}`
+                  : search.isFetching
+                    ? "Searching..."
+                    : "No devices match the current filter."}
               </TableCell>
             </TableRow>
           )}
-          {table.getRowModel().rows.map((row) => (
-            <TableRow
-              key={row.id}
-              onClick={() => navigate(`/devices/${row.original.deviceId}`)}
-              className={`group cursor-pointer ${activeDeviceId === row.original.deviceId ? "bg-blue-50" : "hover:bg-slate-50"}`}
-            >
-              {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id} className="py-3">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-              <TableCell className="py-3 text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <DeleteDeviceButton
+          {table.getRowModel().rows.map((row) => {
+            const id = row.original.deviceId;
+            const matches = search.matchesByDevice.get(id) ?? [];
+            const expandable = search.expandable && matches.length > 0;
+            const expanded = expandable && expandedIds.has(id);
+            return (
+              <Fragment key={row.id}>
+                <TableRow
+                  onClick={() => (expandable ? toggleExpanded(id) : navigate(`/devices/${id}`))}
+                  aria-expanded={expandable ? expanded : undefined}
+                  className={`group cursor-pointer ${activeDeviceId === id ? "bg-blue-50" : "hover:bg-slate-50"} ${search.isStale ? "opacity-60" : ""}`}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="py-3">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                  <TableCell className="py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                       <DeleteDeviceButton
                     deviceId={row.original.deviceId}
                     canDelete={deletableDevices.has(row.original.deviceId)}
                     onDelete={() => setDeleteTargetId(row.original.deviceId)}
                   />
-                  <ChevronRightIcon className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+                      {expandable ? (
+                        <>
+                          <span className="whitespace-nowrap text-xs text-muted-foreground">
+                            {matches.length} {matches.length === 1 ? "match" : "matches"}
+                          </span>
+                          <ChevronDownIcon
+                            className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
+                          />
+                        </>
+                      ) : (
+                        <ChevronRightIcon className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+                {expanded && (
+                  <TableRow className="bg-slate-50 hover:bg-slate-50">
+                    <TableCell colSpan={table.getVisibleLeafColumns().length + 1} className="p-0">
+                      <DeviceMatchList deviceId={id} matches={matches} terms={search.terms} />
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
+            );
+          })}
         </TableBody>
       </Table>
 

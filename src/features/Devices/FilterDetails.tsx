@@ -16,14 +16,14 @@ export default function FilterDetails({ totalRows, filteredRows, clearTableFilte
     <>
       {totalRows !== filteredRows ? (
         <div className={`flex flex-row gap-2 ${className}`}>
-          {clearTableFilter && (
-            <Button size="sm" variant="outline" onClick={clearTableFilter}>
-              Clear filter
-            </Button>
-          )}
-          <Badge color={BadgeColor.Gray} className="flex-0">
+          {/* {clearTableFilter && (
+            // <Button size="sm" variant="outline" onClick={clearTableFilter}>
+            //   Clear filter
+            // </Button>
+          )} */}
+          {/* <Badge color={BadgeColor.Gray} className="flex-0">
             Filtered {filteredRows} of {totalRows} devices
-          </Badge>
+          </Badge> */}
         </div>
       ) : null}
     </>
