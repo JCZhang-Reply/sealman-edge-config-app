@@ -2,6 +2,9 @@ import { useMemo } from "react";
 import PageTitle from "@/components/Typography/PageTitle";
 import TypesManager from "@/features/PlatformTypes/TypesManager";
 import DefaultScanPortsCard from "@/features/PlatformTypes/DefaultScanPortsCard";
+import { PERMISSION_KEYS } from "@/features/authorization/permissions/permission-keys";
+import { usePermissions } from "@/features/authorization/permissions/use-permissions";
+import { useNetworkScanEnabled } from "@/features/PlatformFunctions/platformFunctionsApi";
 import ExtensionOutlet from "@/features/Extensions/outlets/ExtensionOutlet";
 import { useOutletUser } from "@/features/Extensions/outlets/useOutletUser";
 import useGetDeviceTypes from "@/generated/edge-administration/hooks/device_types/useGetDeviceTypes";
@@ -17,8 +20,6 @@ import { usePostServiceType } from "@/generated/edge-administration/hooks/servic
 import { useUpdateServiceType } from "@/generated/edge-administration/hooks/service_types/useUpdateServiceType";
 import { useDeleteServiceType } from "@/generated/edge-administration/hooks/service_types/useDeleteServiceType";
 import { listRegisteredBrowsers } from "@/lib/browserRegistry";
-import { PERMISSION_KEYS } from "@/features/authorization/permissions/permission-keys";
-import { usePermissions } from "@/features/authorization/permissions/use-permissions";
 import {
   ENDPOINT_ROLE_OPTIONS,
   ENDPOINT_TYPE_DEFAULT_FIELDS,
@@ -30,7 +31,10 @@ import {
 
 export default function PlatformTypesSettings() {
   const user = useOutletUser();
-  const { hasPermission: canWrite } = usePermissions({ permissionKey: PERMISSION_KEYS.PLATFORM_CONFIG_WRITE });
+  const { hasPermission: canWrite, isLoading: isWritePermissionLoading } = usePermissions({
+    permissionKey: PERMISSION_KEYS.PLATFORM_ASSET_CONFIG_WRITE,
+  });
+  const canEdit = canWrite && !isWritePermissionLoading;
   const deviceTypesQuery = useGetDeviceTypes();
   const { postDeviceType } = usePostDeviceType();
   const { updateDeviceType } = useUpdateDeviceType();
@@ -54,6 +58,8 @@ export default function PlatformTypesSettings() {
   const { updateServiceType } = useUpdateServiceType();
   const { deleteServiceType } = useDeleteServiceType();
 
+  const networkScanEnabled = useNetworkScanEnabled() === true;
+
   return (
     <div className="space-y-6">
       <PageTitle
@@ -68,10 +74,10 @@ export default function PlatformTypesSettings() {
           description="Types available when creating devices."
           types={deviceTypesQuery.data ?? []}
           isLoading={deviceTypesQuery.isLoading}
+          canEdit={canEdit}
           defaultFields={defaultDeviceTypeFields}
           supportsListVisibility
           protectedTypeId="default"
-          canWrite={canWrite}
           onCreate={async (body) => {
             await postDeviceType(body);
             await deviceTypesQuery.refetch();
@@ -92,12 +98,12 @@ export default function PlatformTypesSettings() {
           description="Types available when creating endpoints on a device."
           types={endpointTypesQuery.data ?? []}
           isLoading={endpointTypesQuery.isLoading}
+          canEdit={canEdit}
           defaultFields={ENDPOINT_TYPE_DEFAULT_FIELDS}
           defaultMapping={ENDPOINT_TYPE_DEFAULT_MAPPING}
           roleOptions={ENDPOINT_ROLE_OPTIONS}
           supportsListVisibility
           cascadeDelete={{ instancesLabel: "endpoint" }}
-          canWrite={canWrite}
           onCreate={async (body) => {
             await postEndpointType({ ...body, mapping: body.mapping ?? {} });
             await endpointTypesQuery.refetch();
@@ -118,12 +124,12 @@ export default function PlatformTypesSettings() {
           description="Types available when creating services on an endpoint."
           types={serviceTypesQuery.data ?? []}
           isLoading={serviceTypesQuery.isLoading}
+          canEdit={canEdit}
           browserKindOptions={listRegisteredBrowsers()}
           defaultFields={SERVICE_TYPE_DEFAULT_FIELDS}
           defaultMapping={SERVICE_TYPE_DEFAULT_MAPPING}
           roleOptions={SERVICE_ROLE_OPTIONS}
           cascadeDelete={{ instancesLabel: "service" }}
-          canWrite={canWrite}
           onCreate={async (body) => {
             await postServiceType({ ...body, mapping: body.mapping ?? {} });
             await serviceTypesQuery.refetch();
@@ -138,12 +144,10 @@ export default function PlatformTypesSettings() {
           }}
         />
 
-        <DefaultScanPortsCard canWrite={canWrite} />
+  {networkScanEnabled && <DefaultScanPortsCard canEdit={canEdit} />}
 
         {/* Extensions contribute their own platform-configuration cards here (e.g. fields they need). */}
-        <div inert={!canWrite} aria-disabled={!canWrite}>
-          <ExtensionOutlet target="global" placement="section" context={{ user }} />
-        </div>
+        <ExtensionOutlet target="global" placement="section" context={{ user }} />
       </div>
     </div>
   );

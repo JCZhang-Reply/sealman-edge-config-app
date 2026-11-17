@@ -17,7 +17,7 @@ export interface TypesManagerProps {
   description?: string;
   types: TypeRecord[];
   isLoading: boolean;
-  canWrite?: boolean;
+  canEdit?: boolean;
   /** When set, the form lets this type be assigned one of these built-in browsers. */
   browserKindOptions?: BrowserKindOption[];
   /** When set, a brand-new type starts pre-populated with these fields instead of a blank row -
@@ -76,7 +76,7 @@ export default function TypesManager({
   description,
   types,
   isLoading,
-  canWrite = true,
+  canEdit = true,
   browserKindOptions,
   defaultFields,
   defaultMapping,
@@ -108,6 +108,7 @@ export default function TypesManager({
   };
 
   const handleSubmit = async (result: TypeFormResult) => {
+    if (!canEdit) return;
     setIsSubmitting(true);
     try {
       if (dialogState.editing) {
@@ -138,7 +139,7 @@ export default function TypesManager({
   const isDeleteConfirmationValid = deleteConfirmationText.trim().toLowerCase() === "confirm";
 
   const handleDelete = async () => {
-    if (!pendingDelete) return;
+    if (!canEdit || !pendingDelete) return;
     if (cascadeDelete && !isDeleteConfirmationValid) return;
     setIsDeleting(true);
     try {
@@ -162,7 +163,7 @@ export default function TypesManager({
           <h3 className="text-lg font-semibold">{title}</h3>
           {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
         </div>
-        <Button type="button" variant="outline" onClick={openAdd} disabled={!canWrite} title={!canWrite ? "Requires platform.config.write" : undefined} className="shrink-0">
+        <Button type="button" variant="outline" onClick={openAdd} disabled={!canEdit} className="shrink-0">
           <PlusIcon />
           Add {singularLabel.toLowerCase()}
         </Button>
@@ -208,8 +209,7 @@ export default function TypesManager({
                         variant="ghost"
                         size="icon"
                         onClick={() => openEdit(type)}
-                        disabled={!canWrite}
-                        title={!canWrite ? "Requires platform.config.write" : `Edit ${type.label}`}
+                        disabled={!canEdit}
                         aria-label={`Edit ${type.label}`}
                       >
                         <PencilSquareIcon />
@@ -220,8 +220,7 @@ export default function TypesManager({
                           size="icon"
                           className="text-destructive hover:text-destructive"
                           onClick={() => setPendingDelete(type)}
-                          disabled={!canWrite}
-                          title={!canWrite ? "Requires platform.config.write" : `Delete ${type.label}`}
+                          disabled={!canEdit}
                           aria-label={`Delete ${type.label}`}
                         >
                           <TrashIcon />
@@ -236,21 +235,22 @@ export default function TypesManager({
         </table>
       </div>
 
-      {canWrite && <TypeFormDialog
+      <TypeFormDialog
         isOpen={dialogState.open}
         onClose={closeDialog}
         onSubmit={handleSubmit}
         initial={dialogState.editing}
         singularLabel={singularLabel}
         isPending={isSubmitting}
+        canSave={canEdit}
         browserKindOptions={browserKindOptions}
         defaultFields={defaultFields}
         defaultMapping={defaultMapping}
         roleOptions={roleOptions}
         supportsListVisibility={supportsListVisibility}
-      />}
+      />
 
-      {canWrite && <SimpleDialog
+      <SimpleDialog
         isOpen={pendingDelete !== null}
         title={pendingDelete ? `Delete ${singularLabel.toLowerCase()} "${pendingDelete.label}"` : ""}
       >
@@ -284,7 +284,7 @@ export default function TypesManager({
               size="sm"
               variant="destructive"
               onClick={handleDelete}
-              disabled={isDeleting || (cascadeDelete ? !isDeleteConfirmationValid : false)}
+              disabled={!canEdit || isDeleting || (cascadeDelete ? !isDeleteConfirmationValid : false)}
             >
               {isDeleting && <WaterLoader />}
               Delete
@@ -299,7 +299,7 @@ export default function TypesManager({
             </Button>
           </div>
         </div>
-      </SimpleDialog>}
+      </SimpleDialog>
     </div>
   );
 }

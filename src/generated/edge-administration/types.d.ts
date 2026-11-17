@@ -1593,6 +1593,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/extensions/{name}/device-keys/by-id/{key_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a device key by UUID */
+        delete: operations["revoke_device_key_by_id_extensions__name__device_keys_by_id__key_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/extensions/{name}/device-keys/{device_id}": {
         parameters: {
             query?: never;
@@ -2332,6 +2349,10 @@ export interface components {
         };
         /** ExtensionDetail */
         ExtensionDetail: {
+            /** Initial internal key issuance (unchanged by rotation). */
+            internal_key_created_at?: string | null;
+            /** Most recent internal key rotation, or null before the first rotation. */
+            internal_key_rotated_at?: string | null;
             /**
              * Schema Version
              * @constant
@@ -4247,12 +4268,20 @@ export interface components {
         };
         /** DeviceKeyInfo */
         DeviceKeyInfo: {
+            /** Id (UUID) */
+            id: string;
             /** Device Id */
             device_id: string;
             /** Module Id */
             module_id?: string | null;
+            /** Label */
+            label?: string | null;
+            /** Description */
+            description?: string | null;
             /** Created At */
-            created_at?: string | null;
+            created_at: string;
+            /** Revoked At */
+            revoked_at?: string | null;
         };
         /** DeviceKeyRequest */
         DeviceKeyRequest: {
@@ -4260,9 +4289,15 @@ export interface components {
             device_id: string;
             /** Module Id */
             module_id?: string | null;
+            /** Label */
+            label?: string | null;
+            /** Description */
+            description?: string | null;
         };
         /** DeviceKeyIssueResponse */
         DeviceKeyIssueResponse: {
+            /** Id (UUID) */
+            id: string;
             /** Device Id */
             device_id: string;
             /** Device Key */
@@ -8425,6 +8460,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_device_key_by_id_extensions__name__device_keys_by_id__key_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+                key_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No active matching key */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        detail?: string;
+                    };
                 };
             };
         };

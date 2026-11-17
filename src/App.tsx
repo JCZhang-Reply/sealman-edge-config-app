@@ -16,10 +16,13 @@ import SettingsLayout from "./pages/settings/SettingsLayout";
 import PlatformTypesSettings from "./pages/settings/PlatformTypesSettings";
 import PageTitle from "./components/Typography/PageTitle";
 import SealAgentSettings from "./pages/settings/SealAgentSettings";
+import AppearanceSettings from "./pages/settings/AppearanceSettings";
+import PlatformFunctionsSettings from "./pages/settings/PlatformFunctionsSettings";
 import PresetTemplateVariablesSettings from "./pages/settings/PresetTemplateVariablesSettings";
 import { DeviceTemplateVariablesSection, IOTEDGE_AGENT_VARIABLES, IOTEDGE_REGISTRY_VARIABLES, SEALMAN_EMS_VARIABLES } from "./pages/settings/TemplatesSettings";
 import DeploymentsLayout from "./pages/deployments/DeploymentsLayout";
 import AssetConfigurationLayout from "./pages/assetConfiguration/AssetConfigurationLayout";
+import AssetConfigurationAccess from "./pages/assetConfiguration/AssetConfigurationAccess";
 import { SmartEmsAuthCallback } from "./features/Devices/Network/smart_ems/pages/AuthCallback";
 import ExtensionsSettings from "./features/Extensions/ExtensionsSettings";
 import ExtensionDetail from "./features/Extensions/ExtensionDetail";
@@ -84,10 +87,12 @@ export default function App() {
               <Route path=":deviceId/*" element={<DeviceDetail />} />
             </Route>
 
-            <Route path="platform-types" element={<AssetConfigurationLayout />}>
-              <Route index element={<Navigate to="asset-types" replace />} />
-              <Route path="asset-types" element={<PlatformTypesSettings />} />
-              <Route path="templates" element={<Navigate to="/settings/sealman-ems" replace />} />
+            <Route element={<AssetConfigurationAccess />}>
+              <Route path="platform-types" element={<AssetConfigurationLayout />}>
+                <Route index element={<Navigate to="asset-types" replace />} />
+                <Route path="asset-types" element={<PlatformTypesSettings />} />
+                <Route path="templates" element={<Navigate to="/settings/sealman-ems" replace />} />
+              </Route>
             </Route>
             <Route path="deployments" element={<DeploymentsLayout />}>
               <Route index element={<Navigate to="management" replace />} />
@@ -135,6 +140,8 @@ export default function App() {
               <Route index element={<Navigate to="seal-agent" replace />} />
               <Route path="platform-types" element={<Navigate to="/platform-types/asset-types" replace />} />
               <Route path="seal-agent" element={<SealAgentSettings />} />
+              <Route path="appearance" element={<AppearanceSettings />} />
+              <Route path="platform-functions" element={<PlatformFunctionsSettings />} />
               <Route
                 path="azure-iot-edge"
                 element={

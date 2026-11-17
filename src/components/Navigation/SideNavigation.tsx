@@ -22,11 +22,24 @@ interface INavigation {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   end?: boolean;
   separatorBefore?: boolean;
+  separatorAfter?: boolean;
 }
 
 export default function SideNavigation() {
-  const { hasPermission: hasAuthorizationReadPermission, isLoading: isPermissionsLoading } = usePermissions({
+  const { hasPermission: hasAuthorizationReadPermission, isLoading: isAuthPermissionsLoading } = usePermissions({
     permissionKey: PERMISSION_KEYS.PLATFORM_AUTHORIZATION_READ,
+  });
+  const {
+    hasPermission: hasPlatformConfigReadPermission,
+    isLoading: isPlatformConfigPermissionsLoading,
+  } = usePermissions({
+    permissionKey: PERMISSION_KEYS.PLATFORM_CONFIG_READ,
+  });
+  const {
+    hasPermission: hasAssetConfigReadPermission,
+    isLoading: isAssetConfigPermissionsLoading,
+  } = usePermissions({
+    permissionKey: PERMISSION_KEYS.PLATFORM_ASSET_CONFIG_READ,
   });
 
   const user = useOutletUser();
@@ -35,33 +48,47 @@ export default function SideNavigation() {
   const navigation: INavigation[] = useMemo(() => {
     const items: INavigation[] = [
       { name: "Dashboard", href: "/", icon: HomeIcon, end: true },
-      { name: "Devices", href: "/devices", icon: CpuChipIcon },
-      { name: "Asset Configuration", href: "/platform-types", icon: Squares2X2Icon, separatorBefore: true },
-      { name: "Deployments", href: "/deployments", icon: RocketLaunchIcon },
+      { name: "Devices", href: "/devices", icon: CpuChipIcon, separatorAfter: true },
     ];
 
-    if (!isPermissionsLoading && hasAuthorizationReadPermission) {
+    if (!isAssetConfigPermissionsLoading && hasAssetConfigReadPermission) {
+      items.push({ name: "Asset Configuration", href: "/platform-types", icon: Squares2X2Icon });
+    }
+
+    items.push({ name: "Deployments", href: "/deployments", icon: RocketLaunchIcon });
+
+    if (!isAuthPermissionsLoading && hasAuthorizationReadPermission) {
       items.push({ name: "Authorization", href: "/authorization/teams", icon: ShieldCheckIcon });
     }
 
     items.push({ name: "Monitoring", href: "/monitoring", icon: ClockIcon });
 
-    items.push({
-      name: "Platform Configuration",
-      href: "/settings/seal-agent",
-      icon: Cog6ToothIcon,
-      separatorBefore: true,
-    });
+    if (!isPlatformConfigPermissionsLoading && hasPlatformConfigReadPermission) {
+      items.push({
+        name: "Platform Configuration",
+        href: "/settings/seal-agent",
+        icon: Cog6ToothIcon,
+        separatorBefore: true,
+      });
+    }
 
     for (const page of extensionPages) {
       items.push({ name: page.label, href: page.to, icon: PuzzlePieceIcon });
     }
 
     return items;
-  }, [hasAuthorizationReadPermission, isPermissionsLoading, extensionPages]);
+  }, [
+    hasAuthorizationReadPermission,
+    hasAssetConfigReadPermission,
+    hasPlatformConfigReadPermission,
+    isAuthPermissionsLoading,
+    isAssetConfigPermissionsLoading,
+    isPlatformConfigPermissionsLoading,
+    extensionPages,
+  ]);
 
   return (
-    <aside className="flex h-full w-16 shrink-0 flex-col bg-[#0f1f47] lg:w-60">
+    <aside className="flex h-full w-16 shrink-0 flex-col bg-nav lg:w-60">
       <nav aria-label="Main navigation" className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
         {navigation.map((item) => (
           <Fragment key={item.href}>
@@ -72,13 +99,14 @@ export default function SideNavigation() {
               title={item.name}
               className={({ isActive }) =>
                 `flex items-center justify-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors lg:justify-start ${
-                  isActive ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"
+                  isActive ? "bg-nav-active text-nav-active-foreground" : "text-nav-foreground hover:bg-white/10 hover:text-white"
                 }`
               }
             >
               <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
               <span className="hidden lg:inline">{item.name}</span>
             </NavLink>
+            {item.separatorAfter && <div className="my-2 border-t border-white/10" role="separator" />}
           </Fragment>
         ))}
       </nav>

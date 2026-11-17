@@ -48,6 +48,7 @@ interface TypeFormDialogProps {
   initial?: TypeRecord | null;
   singularLabel: string;
   isPending?: boolean;
+  canSave?: boolean;
   /** When set, shows a "Browse Action" dropdown letting this type be assigned one of these
    * built-in browsers (e.g. VNC, OPC-UA, plain HTTP) for its "Browse" button on the Overview page. */
   browserKindOptions?: BrowserKindOption[];
@@ -74,6 +75,7 @@ export default function TypeFormDialog({
   initial,
   singularLabel,
   isPending,
+  canSave = true,
   browserKindOptions,
   defaultFields,
   defaultMapping,
@@ -269,7 +271,7 @@ export default function TypeFormDialog({
           <Button
             type="button"
             onClick={handleSave}
-            disabled={isPending || duplicateKeys.size > 0}
+            disabled={!canSave || isPending || duplicateKeys.size > 0}
           >
             {isPending ? "Saving..." : isEdit ? "Save changes" : `Add ${singularLabel.toLowerCase()}`}
           </Button>

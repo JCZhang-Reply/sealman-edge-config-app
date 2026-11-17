@@ -45,6 +45,16 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
+  --color-nav: hsl(var(--nav));
+  --color-nav-foreground: hsl(var(--nav-foreground));
+  --color-nav-active: hsl(var(--nav-active));
+  --color-nav-active-foreground: hsl(var(--nav-active-foreground));
+  --color-header-from: hsl(var(--header-from));
+  --color-header-via: hsl(var(--header-via));
+  --color-header-to: hsl(var(--header-to));
+  --color-header-border: hsl(var(--header-border));
+  --color-page: hsl(var(--page));
+
   --color-chart-1: hsl(var(--chart-1));
   --color-chart-2: hsl(var(--chart-2));
   --color-chart-3: hsl(var(--chart-3));
@@ -188,6 +198,16 @@
         --chart-4: 43 74% 66%;
         --chart-5: 27 87% 67%;
         --radius: 0.5rem;
+        /* App shell - keep in sync with src/features/Appearance/themes.ts */
+        --nav: 223 65% 17%;
+        --nav-foreground: 213 27% 84%;
+        --nav-active: 221 83% 53%;
+        --nav-active-foreground: 0 0% 100%;
+        --header-from: 0 0% 100%;
+        --header-via: 214 100% 97% / 0.6;
+        --header-to: 214 95% 93% / 0.7;
+        --header-border: 214 95% 93%;
+        --page: 210 20% 98%;
     }
   .dark {
         --background: 0 0% 3.9%;

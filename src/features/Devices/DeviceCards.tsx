@@ -3,11 +3,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import { DeviceCardsProps } from "./Devices.types";
 import FilterDetails from "./FilterDetails";
 import DebouncedInput from "@/components/Input/DebouncedInput";
+import DeviceManageDialog from "./DeviceManageDialog";
 
 export function DeviceCards({
   table,
   globalFilter,
   data,
+  canCreate,
 }: DeviceCardsProps) {
   const navigate = useNavigate();
   const { deviceId } = useParams();
@@ -40,11 +42,13 @@ export function DeviceCards({
   return (
     <div className="space-y-3 p-4">
       <div className="sticky top-0 z-10 space-y-2 rounded-lg border bg-background p-3 shadow-xs">
-        <FilterDetails
-          className="pb-2"
-          totalRows={data.length}
-          filteredRows={table.getRowModel().rows.length}
-        />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <FilterDetails
+            totalRows={data.length}
+            filteredRows={table.getRowModel().rows.length}
+          />
+          <DeviceManageDialog canCreate={canCreate} />
+        </div>
 
         <DebouncedInput
           className="w-full"

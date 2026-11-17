@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Badge from "../../components/Typography/Badge";
 import { useNavigate, useParams } from "react-router-dom";
-import { ChevronRightIcon, CpuChipIcon, MagnifyingGlassIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { ChevronRightIcon, CpuChipIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import {
   Table,
   TableBody,
@@ -31,8 +31,8 @@ import useDeviceMetadataFields from "@/features/PlatformTypes/useDeviceMetadataF
 import { formatMetadataValue } from "@/features/PlatformTypes/FieldValueInput";
 import { DeviceDataDisplay, DeviceListProps } from "./Devices.types";
 import { DeviceCards } from "./DeviceCards";
-import DeviceManageDialog, { DeleteDeviceDialog } from "./DeviceManageDialog";
-import { Button } from "@/components/ui/button";
+import DeviceManageDialog, { DeleteDeviceButton, DeleteDeviceDialog } from "./DeviceManageDialog";
+import { useDeviceManagementPermissions } from "@/features/authorization/permissions/use-device-management-permissions";
 import { ErrorState, LoadingState } from "@/components/ui/page-state";
 import { getErrorMessage } from "@/lib/errors";
 
@@ -114,6 +114,8 @@ export default function DeviceList() {
     () => formatDataForTable(data as DeviceData[]),
     [data],
   );
+  const permissions = useDeviceManagementPermissions(!isLoading && !isError && data !== undefined);
+  const deletableDevices = useMemo(() => new Set(permissions?.deletable_device_ids ?? []), [permissions]);
 
   // Metadata columns are just the customizable display in the table - which fields show up
   // there is controlled by each default device type field's show_in_list setting. Search itself
@@ -238,10 +240,10 @@ export default function DeviceList() {
                   className="pl-9"
                 />
               </div>
-              <DeviceManageDialog />
+              <DeviceManageDialog canCreate={permissions?.can_create ?? false} />
             </div>
           </div>
-          <DeviceTable table={table} />
+          <DeviceTable table={table} deletableDevices={deletableDevices} />
         </div>
       </div>
       <div className="block @2xl:hidden">
@@ -249,13 +251,14 @@ export default function DeviceList() {
           table={table}
           globalFilter={globalFilter}
           data={tableData}
+          canCreate={permissions?.can_create ?? false}
         />
       </div>
     </div>
   );
 }
 
-function DeviceTable({ table }: DeviceListProps) {
+function DeviceTable({ table, deletableDevices }: DeviceListProps & { deletableDevices: Set<string> }) {
   const navigate = useNavigate();
   const { deviceId: activeDeviceId } = useParams();
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -304,19 +307,11 @@ function DeviceTable({ table }: DeviceListProps) {
               ))}
               <TableCell className="py-3 text-right">
                 <div className="flex items-center justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteTargetId(row.original.deviceId);
-                    }}
-                    className="h-8 w-8 text-muted-foreground opacity-0 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
-                    title="Delete device"
-                    aria-label={`Delete device ${row.original.deviceId}`}
-                  >
-                    <TrashIcon />
-                  </Button>
+                  <DeleteDeviceButton
+                    deviceId={row.original.deviceId}
+                    canDelete={deletableDevices.has(row.original.deviceId)}
+                    onDelete={() => setDeleteTargetId(row.original.deviceId)}
+                  />
                   <ChevronRightIcon className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </div>
               </TableCell>

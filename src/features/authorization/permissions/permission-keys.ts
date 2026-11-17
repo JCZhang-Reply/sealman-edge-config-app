@@ -3,6 +3,8 @@ export const PERMISSION_KEYS = {
   PLATFORM_AUTHORIZATION_WRITE: "platform.authorization.write",
   PLATFORM_CONFIG_READ: "platform.config.read",
   PLATFORM_CONFIG_WRITE: "platform.config.write",
+  PLATFORM_ASSET_CONFIG_READ: "platform.asset.config.read",
+  PLATFORM_ASSET_CONFIG_WRITE: "platform.asset.config.write",
   DEVICE_DEPLOYMENT_WRITE: "device.deployment.write",
   DEVICE_LINE_WRITE: "device.line.write",
   DEVICE_MODULE_EXECUTE_METHOD: "device.module.execute_method",
