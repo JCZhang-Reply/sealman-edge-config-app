@@ -3,6 +3,7 @@ import {
   ClockIcon,
   Cog6ToothIcon,
   CpuChipIcon,
+  DocumentDuplicateIcon,
   HomeIcon,
   PuzzlePieceIcon,
   RocketLaunchIcon,
@@ -45,6 +46,10 @@ export default function SideNavigation() {
     permissionKey: PERMISSION_KEYS.PLATFORM_ASSET_CONFIG_READ,
   });
 
+  const { hasPermission: hasTemplateReadPermission, isLoading: isTemplatePermissionLoading } = usePermissions({
+    permissionKey: PERMISSION_KEYS.MODULE_CONFIG_TEMPLATE_READ,
+  });
+
   const user = useOutletUser();
   const extensionPages = useNavContributions("global", "page", { user });
 
@@ -56,6 +61,10 @@ export default function SideNavigation() {
 
     if (!isAssetConfigPermissionsLoading && hasAssetConfigReadPermission) {
       items.push({ name: "Asset Modelling", href: "/platform-types", icon: Squares2X2Icon });
+    }
+
+    if (!isTemplatePermissionLoading && hasTemplateReadPermission) {
+      items.push({ name: "Module Templates", href: "/module-templates", icon: DocumentDuplicateIcon });
     }
 
     items.push({ name: "Deployments", href: "/deployments", icon: RocketLaunchIcon });
@@ -87,6 +96,8 @@ export default function SideNavigation() {
     isAuthPermissionsLoading,
     isAssetConfigPermissionsLoading,
     isPlatformConfigPermissionsLoading,
+    hasTemplateReadPermission,
+    isTemplatePermissionLoading,
     extensionPages,
   ]);
 

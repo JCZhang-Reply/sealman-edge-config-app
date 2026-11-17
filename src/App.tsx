@@ -15,6 +15,10 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import SettingsLayout from "./pages/settings/SettingsLayout";
 import PlatformTypesSettings from "./pages/settings/PlatformTypesSettings";
 import PageTitle from "./components/Typography/PageTitle";
+import TemplateGroupList from "./features/ModuleConfigTemplates/TemplateGroupList";
+import TemplateGroupPage from "./features/ModuleConfigTemplates/TemplateGroupPage";
+import TemplatePage from "./features/ModuleConfigTemplates/TemplatePage";
+import TemplatesLayout from "./features/ModuleConfigTemplates/TemplatesLayout";
 import SealAgentSettings from "./pages/settings/SealAgentSettings";
 import AppearanceSettings from "./pages/settings/AppearanceSettings";
 import PlatformFunctionsSettings from "./pages/settings/PlatformFunctionsSettings";
@@ -85,6 +89,15 @@ export default function App() {
                 }
               />
               <Route path=":deviceId/*" element={<DeviceDetail />} />
+            </Route>
+
+            <Route path="module-templates" element={<TemplatesLayout />}>
+              <Route index element={<TemplateGroupList />} />
+              <Route path="new" element={<TemplateGroupPage />} />
+              <Route path=":groupId" element={<TemplateGroupPage />} />
+              <Route path=":groupId/edit" element={<TemplateGroupPage mode="edit" />} />
+              <Route path=":groupId/templates/new" element={<TemplatePage />} />
+              <Route path=":groupId/templates/:templateId" element={<TemplatePage />} />
             </Route>
 
             <Route element={<AssetConfigurationAccess />}>
@@ -182,6 +195,7 @@ export default function App() {
                 }
               />
               <Route path="templates" element={<Navigate to="/settings/sealman-ems" replace />} />
+              <Route path="module-templates" element={<Navigate to="/module-templates" replace />} />
               <Route path="extensions" element={<ExtensionAccess />}>
                 <Route index element={<ExtensionsSettings />} />
                 <Route element={<ExtensionAccess permissionKey={PERMISSION_KEYS.EXTENSION_REGISTER} />}>
