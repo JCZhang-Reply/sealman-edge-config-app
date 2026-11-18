@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import PageTitle from "@/components/Typography/PageTitle";
 import TypesManager from "@/features/PlatformTypes/TypesManager";
-import DeviceTableColumnsCard from "@/features/PlatformTypes/DeviceTableColumnsCard";
 import DefaultScanPortsCard from "@/features/PlatformTypes/DefaultScanPortsCard";
 import { PERMISSION_KEYS } from "@/features/authorization/permissions/permission-keys";
 import { usePermissions } from "@/features/authorization/permissions/use-permissions";
@@ -85,6 +84,7 @@ export default function PlatformTypesSettings() {
           isLoading={deviceTypesQuery.isLoading}
           canEdit={canEdit}
           defaultFields={defaultDeviceTypeFields}
+          supportsListVisibility
           protectedTypeId="default"
           onCreate={async (body) => {
             await postDeviceType(body);
@@ -100,7 +100,6 @@ export default function PlatformTypesSettings() {
           }}
         />
 
-        <DeviceTableColumnsCard canEdit={canEdit} />
          </>}
 
         {activeTab === "endpoint" && <>
@@ -160,8 +159,7 @@ export default function PlatformTypesSettings() {
           }}
         />
 
-  {networkScanEnabled && <DefaultScanPortsCard canEdit={canEdit} />}
-        <DefaultScanPortsCard />
+          {networkScanEnabled && <DefaultScanPortsCard canEdit={canEdit} />}
         </>}
 
         {/* Extensions contribute their own platform-configuration cards here (e.g. fields they need). */}

@@ -58,3 +58,24 @@ describe("TypesManager mapping", () => {
     expect(onCreate.mock.calls[0][0]).not.toHaveProperty("mapping");
   });
 });
+
+describe("TypesManager write permission", () => {
+  it("disables create, edit, and delete actions without write access", () => {
+    render(
+      <TypesManager
+        title="Device Types"
+        singularLabel="Device Type"
+        types={[{ type_id: "device-type-id", label: "Gateway", description: null, fields: {} }]}
+        isLoading={false}
+        canEdit={false}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Add device type" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Edit Gateway" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Delete Gateway" })).toBeDisabled();
+  });
+});

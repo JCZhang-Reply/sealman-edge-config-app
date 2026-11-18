@@ -194,9 +194,8 @@ interface FieldsEditorProps {
   rows: FieldRow[];
   onChange: (rows: FieldRow[]) => void;
   duplicateKeys?: Set<string>;
-  /** When set, shows a "Show in list" toggle per field, controlling whether its value appears as
-   * extra info in the endpoints list (see EndpointAccordionItem.tsx) - only meaningful for
-   * endpoint types today. */
+  /** When set, shows a "Show in list" toggle per field, controlling whether its value appears in
+   * the corresponding device or endpoint list. */
   showListVisibility?: boolean;
   /** When set, each field row gets a Role selector with these roles. A role another row already
    * has is disabled. */
@@ -405,7 +404,7 @@ export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVi
               {showListVisibility && (
                 <label
                   className="flex items-center gap-2 text-xs font-medium text-muted-foreground whitespace-nowrap"
-                  title="If on, this field's value shows as extra info next to the IP address in the endpoints list"
+                  title="If on, this field's value appears in the corresponding list or table"
                 >
                   <Toggle
                     checked={row.definition.show_in_list !== false}

@@ -28,8 +28,8 @@ export interface TypesManagerProps {
   defaultMapping?: Record<string, string>;
   /** When set, fields get a Role selector and create/update send `mapping`. */
   roleOptions?: RoleOption[];
-  /** When set, each field row gets a "Show in list" toggle controlling whether its value shows
-   * as extra info in the endpoints list - only meaningful for endpoint types. */
+  /** When set, each field row gets a "Show in list" toggle controlling whether its value appears
+   * in the corresponding device or endpoint list. */
   supportsListVisibility?: boolean;
   /** Type ID that can't be deleted (its delete button is hidden entirely) - used for the
    * "default" device type, which the backend also rejects deleting. */
