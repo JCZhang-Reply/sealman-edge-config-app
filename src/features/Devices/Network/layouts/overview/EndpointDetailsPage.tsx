@@ -263,17 +263,32 @@ export default function EndpointDetailsPage({ endpointId, onBack, onOpenServiceD
               </div>
               <div className="divide-y">
                 {Object.entries(type.fields).map(([key, definition]) => (
-                  <div key={key} className="flex items-center justify-between px-4 py-2 text-sm">
-                    <span>
-                      {definition.label} <span className="text-muted-foreground font-mono text-xs">({key})</span>
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {definition.type}
-                      {definition.required ? " · required" : ""}
-                      {definition.default !== null && definition.default !== undefined
-                        ? ` · default: ${definition.default}`
-                        : ""}
-                    </span>
+                  <div key={key} className="px-4 py-2 text-sm">
+                    <div className="flex items-center justify-between gap-4">
+                      <span>
+                        {definition.label} <span className="text-muted-foreground font-mono text-xs">({key})</span>
+                      </span>
+                      <span className="text-muted-foreground text-xs">
+                        {definition.type}
+                        {definition.required ? " · required" : ""}
+                        {definition.default !== null && definition.default !== undefined
+                          ? ` · default: ${definition.default}`
+                          : ""}
+                      </span>
+                    </div>
+                    {definition.type === "list" && (
+                      <div className="mt-2 ml-2 border-l-2 border-muted pl-3">
+                        <p className="text-xs font-medium text-muted-foreground">Each item contains</p>
+                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                          {Object.entries(definition.item_fields ?? {}).map(([itemKey, itemField]) => (
+                            <span key={itemKey} className="text-xs text-muted-foreground">
+                              {itemField.label} <span className="font-mono">({itemKey})</span>
+                              {` · ${itemField.type}${itemField.required ? " · required" : ""}`}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -9,7 +9,7 @@ interface InlineMetadataFieldProps {
   label: string;
   value: unknown;
   editing: boolean;
-  definition?: FieldDefinition;
+  definition?: FieldDefinition | null;
   onChange?: (value: unknown) => void;
   onDelete?: () => void;
 }
@@ -18,6 +18,57 @@ function inputValue(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string" || typeof value === "number") return String(value);
   return JSON.stringify(value);
+}
+
+function displayValue(value: unknown): string {
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  return value == null ? "" : JSON.stringify(value);
+}
+
+function listItemValues(item: Record<string, unknown>, definition: FieldDefinition) {
+  const fields = definition.item_fields ?? {};
+  const order = definition.item_order ?? Object.keys(fields);
+  const keys = [
+    ...order.filter((key) => key in item),
+    ...Object.keys(item).filter((key) => key !== "id" && !order.includes(key)),
+  ];
+  return keys
+    .map((key) => ({ key, label: fields[key]?.label ?? key, value: displayValue(item[key]) }))
+    .filter(({ value }) => value !== "");
+}
+
+function ListMetadataValue({ value, definition }: { value: unknown; definition: FieldDefinition }) {
+  const items = Array.isArray(value)
+    ? value.filter((item): item is Record<string, unknown> => item !== null && typeof item === "object" && !Array.isArray(item))
+    : [];
+
+  if (items.length === 0) {
+    return <span className="text-xs font-normal text-muted-foreground">No items</span>;
+  }
+
+  return (
+    <ul aria-label={`${definition.label} items`} className="max-h-32 space-y-1 overflow-y-auto py-1">
+      {items.map((item, index) => {
+        const values = listItemValues(item, definition);
+        return (
+          <li key={typeof item.id === "string" ? item.id : index} className="border-l-2 border-slate-200 pl-2 text-xs font-normal">
+            {values.length > 0 ? (
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                {values.map(({ key, label, value }) => (
+                  <span key={key} className="break-words">
+                    <span className="text-muted-foreground">{label}:</span> {value}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-muted-foreground">Item {index + 1}</span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 export default function InlineMetadataField({ label, value, editing, definition, onChange, onDelete }: InlineMetadataFieldProps) {
@@ -53,9 +104,15 @@ export default function InlineMetadataField({ label, value, editing, definition,
             )}
           </div>
         ) : (
-          <span className="block min-h-8 truncate pt-1 text-[13px] font-medium" title={formatMetadataValue(value, definition ?? { type: "string" })}>
-            {formatMetadataValue(value, definition ?? { type: "string" }) || "-"}
-          </span>
+          definition?.type === "list" ? (
+            <div className="min-h-8 min-w-0 pt-1">
+              <ListMetadataValue value={value} definition={definition} />
+            </div>
+          ) : (
+            <span className="block min-h-8 truncate pt-1 text-[13px] font-medium" title={formatMetadataValue(value, definition ?? { type: "string" })}>
+              {formatMetadataValue(value, definition ?? { type: "string" }) || "-"}
+            </span>
+          )
         )}
       </dd>
     </div>

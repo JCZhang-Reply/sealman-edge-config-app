@@ -9,6 +9,7 @@ import type { RoleOption } from "./typeRoles";
 import FieldInfoTooltip from "./FieldInfoTooltip";
 
 export type FieldDefinition = components["schemas"]["FieldDefinition"];
+export type FieldDefinitionPatch = components["schemas"]["FieldDefinitionUpdate"];
 type FieldType = FieldDefinition["type"];
 type FieldUi = NonNullable<FieldDefinition["ui"]>;
 type FieldValidation = NonNullable<FieldDefinition["validation"]>;
@@ -46,6 +47,7 @@ const UI_OPTIONS_BY_TYPE: Record<FieldType, { value: FieldUi; label: string }[]>
     { value: "number", label: "Number input" },
     { value: "slider", label: "Slider" },
   ],
+  list: [],
 };
 
 export function emptyFieldRow(): FieldRow {
@@ -106,9 +108,10 @@ export function findDuplicateKeys(rows: FieldRow[]): Set<string> {
  */
 export function buildFieldsPayload(
   rows: FieldRow[],
-  originalKeys: string[]
-): Record<string, FieldDefinition | null> {
-  const payload: Record<string, FieldDefinition | null> = {};
+  originalKeys: string[],
+  originalFields: Record<string, FieldDefinition> = {},
+): Record<string, FieldDefinitionPatch | null> {
+  const payload: Record<string, FieldDefinitionPatch | null> = {};
 
   const stillPresentOriginalKeys = new Set(
     rows.filter((r) => r.originalKey && r.originalKey === r.key.trim()).map((r) => r.originalKey as string)
@@ -121,7 +124,21 @@ export function buildFieldsPayload(
   }
 
   for (const row of rows) {
-    payload[row.key.trim()] = row.definition;
+    const definition = { ...row.definition } as FieldDefinitionPatch;
+    delete definition.item_order;
+    if (row.definition.type === "list") {
+      const currentItems = row.definition.item_fields ?? {};
+      const previousKey = row.originalKey === row.key.trim() ? row.originalKey : null;
+      const previousItems = previousKey ? originalFields[previousKey]?.item_fields ?? {} : {};
+      const itemFields: Record<string, FieldDefinition | null> = { ...currentItems };
+      for (const key of Object.keys(previousItems)) {
+        if (!(key in currentItems)) itemFields[key] = null;
+      }
+      definition.item_fields = itemFields;
+    } else {
+      delete definition.item_fields;
+    }
+    payload[row.key.trim()] = definition;
   }
 
   return payload;
@@ -200,6 +217,71 @@ interface FieldsEditorProps {
   /** When set, each field row gets a Role selector with these roles. A role another row already
    * has is disabled. */
   roleOptions?: RoleOption[];
+  /** Enables list fields. Supported only for endpoint types, never for list sub-fields. */
+  supportsListFields?: boolean;
+  /** Reserved field keys used by list item schemas. */
+  reservedKeys?: string[];
+  /** Reports invalid nested field rows to the containing type form. */
+  onNestedErrorsChange?: (fieldRowId: string, error: string | null) => void;
+}
+
+function orderedItemFields(definition: FieldDefinition): Record<string, FieldDefinition> {
+  const fields = definition.item_fields ?? {};
+  const order = definition.item_order ?? Object.keys(fields);
+  return Object.fromEntries([
+    ...order.filter((key) => key in fields).map((key) => [key, fields[key]] as const),
+    ...Object.entries(fields).filter(([key]) => !order.includes(key)),
+  ]);
+}
+
+function ListItemFieldsEditor({
+  definition,
+  onChange,
+  onValidationError,
+}: {
+  definition: FieldDefinition;
+  onChange: (fields: Record<string, FieldDefinition>) => void;
+  onValidationError: (error: string | null) => void;
+}) {
+  const [rows, setRows] = useState(() => rowsFromFields(orderedItemFields(definition)));
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  const validateRows = (nextRows: FieldRow[]) => {
+    if (nextRows.length === 0) return "Add at least one item field";
+    const duplicates = findDuplicateKeys(nextRows);
+    if (duplicates.size > 0) return `Duplicate item field key${duplicates.size > 1 ? "s" : ""}: ${[...duplicates].join(", ")}`;
+    for (const row of nextRows) {
+      const key = row.key.trim();
+      if (!key) return "Every item field needs a key";
+      if (key === "id") return 'The item field key "id" is reserved';
+      if (!row.definition.label.trim()) return `Item field "${key}" needs a label`;
+      if (row.definition.type === "list") return "List item fields must be scalar";
+    }
+    return null;
+  };
+
+  return (
+    <div className="space-y-2">
+      <FieldsEditor
+        rows={rows}
+        onChange={(nextRows) => {
+          setRows(nextRows);
+          const error = validateRows(nextRows);
+          setValidationError(error);
+          onValidationError(error);
+          const fields = Object.fromEntries(
+            nextRows
+              .filter((row) => row.key.trim())
+              .map((row) => [row.key.trim(), row.definition]),
+          );
+          onChange(fields);
+        }}
+        reservedKeys={["id"]}
+        duplicateKeys={findDuplicateKeys(rows)}
+      />
+      {validationError && <p className="text-xs text-destructive">{validationError}</p>}
+    </div>
+  );
 }
 
 /**
@@ -207,7 +289,7 @@ interface FieldsEditorProps {
  * add/remove/edit rows, and for each row render exactly the controls that
  * make sense for its current type/ui (options, default value, etc).
  */
-export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVisibility, roleOptions }: FieldsEditorProps) {
+export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVisibility, roleOptions, supportsListFields, reservedKeys = [], onNestedErrorsChange }: FieldsEditorProps) {
   // Which rows currently show their validation-constraint inputs (Pattern/Min length/Minimum/
   // etc.) and the "Test this field" sandbox - hidden by default so the common case (no
   // constraints needed) stays uncluttered.
@@ -241,12 +323,40 @@ export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVi
   };
 
   const handleTypeChange = (row: FieldRow, type: FieldType) => {
+    if (type === "list") {
+      updateRow(row.id, {
+        definition: {
+          ...row.definition,
+          type,
+          ui: null,
+          options: null,
+          default: null,
+          validation: null,
+          changeable: true,
+          item_fields: {
+            item: {
+              type: "string",
+              label: "Item",
+              required: false,
+              ui: "input",
+              default: null,
+              changeable: true,
+              show_in_list: true,
+            },
+          },
+          item_order: null,
+        },
+        optionsText: "",
+        role: null,
+      });
+      return;
+    }
     const ui = UI_OPTIONS_BY_TYPE[type][0].value;
     updateRow(row.id, {
       // validation is reset too - none of string's pattern/min_length/max_length or
       // integer/number's minimum/maximum/multiple_of carry over correctly across a type change,
       // and the backend forbids `validation` entirely for type=boolean.
-      definition: { ...row.definition, type, ui, options: null, default: null, validation: null },
+      definition: { ...row.definition, type, ui, options: null, default: null, validation: null, item_fields: null, item_order: null },
       optionsText: "",
       // a role needs a specific field type; drop it when the new type no longer fits
       role: roleOptions?.find((o) => o.value === row.role)?.fieldType === type ? row.role : null,
@@ -291,10 +401,12 @@ export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVi
 
       {rows.map((row) => {
         const uiOptions = UI_OPTIONS_BY_TYPE[row.definition.type];
-        const ui = row.definition.ui ?? uiOptions[0].value;
+        const ui = row.definition.ui ?? uiOptions[0]?.value;
+        const isList = row.definition.type === "list";
         const showOptions = ui === "select" || ui === "radio";
         const trimmedKey = row.key.trim();
         const isDuplicate = duplicateKeys?.has(trimmedKey.toLowerCase()) && trimmedKey !== "";
+        const isReserved = reservedKeys.includes(trimmedKey);
         const showValidation = expandedValidation.has(row.id);
 
         return (
@@ -310,6 +422,7 @@ export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVi
                     className={`${compactInputClass} font-mono ${isDuplicate ? "border-destructive focus:border-destructive" : ""}`}
                   />
                   {isDuplicate && <p className="text-xs text-destructive mt-1">Duplicate key</p>}
+                  {isReserved && <p className="text-xs text-destructive mt-1">This key is reserved</p>}
                 </Field>
               </div>
 
@@ -326,7 +439,7 @@ export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVi
               </div>
 
               <div className="col-span-2">
-                <Field label="Type" info="The data type accepted for this field: text, true/false, whole number, or decimal number. Changing the type resets incompatible widget and validation settings.">
+                <Field label="Type" info="The data type accepted for this field. Changing the type resets incompatible widget and validation settings.">
                   <Select value={row.definition.type} onValueChange={(v) => handleTypeChange(row, v as FieldType)}>
                     <SelectTrigger className="h-8">
                       <SelectValue />
@@ -336,12 +449,13 @@ export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVi
                       <SelectItem value="boolean">Boolean</SelectItem>
                       <SelectItem value="integer">Integer</SelectItem>
                       <SelectItem value="number">Number</SelectItem>
+                      {supportsListFields && <SelectItem value="list">List of objects</SelectItem>}
                     </SelectContent>
                   </Select>
                 </Field>
               </div>
 
-              <div className="col-span-2">
+              {!isList && <div className="col-span-2">
                 <Field label="Widget" info="Controls how users enter this value. Available widgets depend on the selected data type. Dropdown and radio widgets require options.">
                   <Select
                     value={ui}
@@ -361,7 +475,7 @@ export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVi
                     </SelectContent>
                   </Select>
                 </Field>
-              </div>
+              </div>}
 
               <div className="col-span-1 flex justify-end">
                 {/* Invisible label matches the height of the sibling Field labels, so the button
@@ -390,7 +504,7 @@ export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVi
                 Required <FieldInfoTooltip text="When enabled, users must provide a value before the form can be saved. When disabled, the field may be left empty." />
               </label>
 
-              <label
+              {!isList && <label
                 className="flex items-center gap-2 text-xs font-medium text-muted-foreground whitespace-nowrap"
                 title="If off, an instance's value for this field can no longer be edited once it's been set"
               >
@@ -399,7 +513,7 @@ export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVi
                   onChange={(val) => updateDefinition(row.id, { changeable: val })}
                 />
                 Changeable <FieldInfoTooltip text="When disabled, an instance's value cannot be edited after it has been set. This controls editability of the value, not whether the field appears." />
-              </label>
+              </label>}
 
               {showListVisibility && (
                 <label
@@ -414,7 +528,7 @@ export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVi
                 </label>
               )}
 
-              {roleOptions && (
+              {roleOptions && !isList && (
                 <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground whitespace-nowrap">
                   Role <FieldInfoTooltip text="Maps this field to a built-in endpoint or service role. Only roles compatible with this field's data type can be selected." />
                   <select
@@ -456,7 +570,7 @@ export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVi
                 </Field>
               </div>
 
-              {showOptions && (
+              {!isList && showOptions && (
                 <div className="col-span-4">
                   <Field label="Options (comma separated)" info="Choices offered by the Select or Radio widget. Enter one option per comma-separated value.">
                     <input
@@ -470,7 +584,7 @@ export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVi
                 </div>
               )}
 
-              <div className={showOptions ? "col-span-3" : "col-span-7"}>
+              {!isList && <div className={showOptions ? "col-span-3" : "col-span-7"}>
                 <Field label="Default value" info="The initial value suggested for this field. It must match the selected data type and any configured validation rules.">
                   <FieldValueInput
                     definition={row.definition}
@@ -478,15 +592,24 @@ export default function FieldsEditor({ rows, onChange, duplicateKeys, showListVi
                     onChange={(value) => updateDefinition(row.id, { default: value })}
                   />
                 </Field>
-              </div>
+              </div>}
             </div>
 
-            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground whitespace-nowrap">
+            {isList ? (
+              <Field label="Item fields" info="Each list item is an object with these scalar fields. The row ID is managed automatically.">
+                <ListItemFieldsEditor
+                  key={row.id}
+                  definition={row.definition}
+                  onChange={(itemFields) => updateDefinition(row.id, { item_fields: itemFields })}
+                  onValidationError={(error) => onNestedErrorsChange?.(row.id, error)}
+                />
+              </Field>
+            ) : <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground whitespace-nowrap">
               <Toggle checked={showValidation} onChange={() => toggleValidationVisibility(row.id)} />
               Validation options <FieldInfoTooltip text="Optional constraints checked when users enter a value. The available constraints depend on the field's data type." />
-            </label>
+            </label>}
 
-            {showValidation && (
+            {!isList && showValidation && (
               <div className="pt-2 border-t space-y-3">
                 {row.definition.type === "string" && (
                   <div className="grid grid-cols-12 gap-3">

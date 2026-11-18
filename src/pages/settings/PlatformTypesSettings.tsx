@@ -114,6 +114,7 @@ export default function PlatformTypesSettings() {
           defaultMapping={ENDPOINT_TYPE_DEFAULT_MAPPING}
           roleOptions={ENDPOINT_ROLE_OPTIONS}
           supportsListVisibility
+          supportsListFields
           cascadeDelete={{ instancesLabel: "endpoint" }}
           onCreate={async (body) => {
             await postEndpointType({ ...body, mapping: body.mapping ?? {} });

@@ -16,7 +16,7 @@ function stringField(label: string, required = false): FieldDefinition {
   return { type: "string", label, required, ui: "input", default: null, changeable: true, show_in_list: true };
 }
 
-function renderEndpointCreate() {
+function renderEndpointCreate(supportsListFields = false) {
   const onSubmit = vi.fn().mockResolvedValue(undefined);
   render(
     <TypeFormDialog
@@ -28,6 +28,7 @@ function renderEndpointCreate() {
       defaultMapping={ENDPOINT_TYPE_DEFAULT_MAPPING}
       roleOptions={ENDPOINT_ROLE_OPTIONS}
       supportsListVisibility
+      supportsListFields={supportsListFields}
     />
   );
   return onSubmit;
@@ -114,5 +115,38 @@ describe("TypeFormDialog roles", () => {
     await userEvent.type(screen.getByPlaceholderText("Human readable name"), "Gateway");
     await userEvent.click(screen.getByRole("button", { name: "Add device type" }));
     expect(onSubmit.mock.calls[0][0].mapping).toBeNull();
+  });
+});
+
+describe("TypeFormDialog list fields", () => {
+  it("only offers list fields when explicitly enabled", async () => {
+    Element.prototype.hasPointerCapture ??= () => false;
+    Element.prototype.setPointerCapture ??= () => {};
+    Element.prototype.releasePointerCapture ??= () => {};
+    Element.prototype.scrollIntoView ??= () => {};
+    renderEndpointCreate();
+
+    await userEvent.click(screen.getAllByRole("combobox")[0]);
+
+    expect(screen.queryByRole("option", { name: "List of objects" })).not.toBeInTheDocument();
+  });
+
+  it("creates a list definition with scalar item fields", async () => {
+    Element.prototype.hasPointerCapture ??= () => false;
+    Element.prototype.setPointerCapture ??= () => {};
+    Element.prototype.releasePointerCapture ??= () => {};
+    Element.prototype.scrollIntoView ??= () => {};
+    const onSubmit = renderEndpointCreate(true);
+
+    await userEvent.click(screen.getAllByRole("combobox")[0]);
+    await userEvent.click(await screen.findByRole("option", { name: "List of objects" }));
+    await userEvent.type(screen.getByPlaceholderText("Human readable name"), "Controller");
+    await userEvent.click(screen.getByRole("button", { name: "Add endpoint type" }));
+
+    expect(onSubmit.mock.calls[0][0].fields.ip).toMatchObject({
+      type: "list",
+      item_fields: { item: { type: "string", label: "Item" } },
+    });
+    expect(onSubmit.mock.calls[0][0].fields.ip).not.toHaveProperty("item_order");
   });
 });

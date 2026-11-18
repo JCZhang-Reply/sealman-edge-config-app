@@ -74,6 +74,7 @@ export default function EndpointAccordionItem({ endpoint, deviceId, onCreated, o
   const serviceFields = serviceType?.fields ?? {};
   const servicePortKey = Object.entries(serviceType?.mapping ?? {}).find(([, role]) => role === "port")?.[0];
   const servicePortField = servicePortKey ? serviceFields[servicePortKey] : undefined;
+  const ipFieldKey = Object.entries(endpointType?.mapping ?? {}).find(([, role]) => role === "ip")?.[0];
   const servicePortData = servicePortKey ? activePort?.service_data?.[servicePortKey] : undefined;
   const serviceCustomFields = Object.entries(activePort?.service_data ?? {}).filter(([key]) => !(key in serviceFields));
   const endpointDraftCustomFields = editingEndpoint
@@ -82,9 +83,20 @@ export default function EndpointAccordionItem({ endpoint, deviceId, onCreated, o
   const serviceDraftCustomFields = editingServiceId === activePort?.service_id
     ? Object.entries(serviceValues).filter(([key]) => !(key in serviceFields) && !(key in (activePort?.service_data ?? {})))
     : [];
-  const endpointFacts = Object.entries(endpoint.endpoint_data ?? {}).filter(([, resolved]) =>
-    resolved.value !== null && resolved.value !== undefined && resolved.value !== "",
-  );
+  const endpointData = endpoint.endpoint_data ?? {};
+  const endpointFacts = [
+    ...Object.entries(endpointData)
+      .map(([key, resolved]) => [key, { ...resolved, field: resolved.field ?? endpointFields[key] ?? null }] as const)
+      .filter(([key, resolved]) =>
+        key !== ipFieldKey && (
+          endpointFields[key]?.type === "list" ||
+          (resolved.value !== null && resolved.value !== undefined && resolved.value !== "")
+        ),
+      ),
+    ...Object.entries(endpointFields)
+      .filter(([key, definition]) => key !== ipFieldKey && definition.type === "list" && !(key in endpointData))
+      .map(([key, field]) => [key, { value: null, field }] as const),
+  ];
   const subtitleParts = display.subtitle.split(" · ").filter((part) => part && part !== endpoint.type_label);
   const hasFallbackTitle = display.title === endpoint.type_label || display.title === `${endpoint.type_label} · ${endpoint.ip}`;
   const endpointSubtitle = hasFallbackTitle ? subtitleParts.filter((part) => part !== endpoint.ip) : subtitleParts;

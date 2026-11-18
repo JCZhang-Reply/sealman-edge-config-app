@@ -2626,7 +2626,7 @@ export interface components {
              * @description Data type of the field value
              * @enum {string}
              */
-            type: "string" | "boolean" | "integer" | "number";
+            type: "string" | "boolean" | "integer" | "number" | "list";
             /**
              * Label
              * @description Human-readable label for UI display
@@ -2671,6 +2671,12 @@ export interface components {
              * @default true
              */
             show_in_list: boolean;
+            /** Sub-field definitions of each row for type=list; absent for scalar fields. */
+            item_fields?: {
+                [key: string]: components["schemas"]["FieldDefinition"];
+            } | null;
+            /** Server-provided display order of list item fields. */
+            item_order?: string[] | null;
         };
         /** FieldDefinitionUpdate */
         FieldDefinitionUpdate: {
@@ -2678,7 +2684,7 @@ export interface components {
              * Type
              * @description Data type of the field value
              */
-            type?: ("string" | "boolean" | "integer" | "number") | null;
+            type?: ("string" | "boolean" | "integer" | "number" | "list") | null;
             /**
              * Label
              * @description Human-readable label for UI display
@@ -2718,6 +2724,12 @@ export interface components {
              * @description If true, this field's value shows as extra info in the endpoints list
              */
             show_in_list?: boolean | null;
+            /** Sub-field changes of a list field; null removes that sub-field. */
+            item_fields?: {
+                [key: string]: components["schemas"]["FieldDefinition"] | null;
+            } | null;
+            /** Server-maintained; accepted only as null so response definitions can be echoed. */
+            item_order?: string[] | null;
         };
         /**
          * FieldValidation

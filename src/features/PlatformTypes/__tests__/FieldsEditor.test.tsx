@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import FieldsEditor, { FieldDefinition, FieldRow, buildMappingPayload, rowsFromFields } from "../FieldsEditor";
+import FieldsEditor, { FieldDefinition, FieldRow, buildFieldsPayload, buildMappingPayload, rowsFromFields } from "../FieldsEditor";
 import { ENDPOINT_ROLE_OPTIONS, SERVICE_ROLE_OPTIONS } from "../typeRoles";
 
 function stringField(label: string): FieldDefinition {
@@ -31,6 +31,38 @@ describe("buildMappingPayload", () => {
     const rows = rowsFromFields({ a: stringField("A"), b: stringField("B") }, { a: "ip" });
     rows[0] = { ...rows[0], key: "  " };
     expect(buildMappingPayload(rows)).toEqual({});
+  });
+});
+
+describe("buildFieldsPayload list definitions", () => {
+  it("sends removed list item fields as null and omits server-owned item_order", () => {
+    const equipment: FieldDefinition = {
+      type: "list",
+      label: "Equipment",
+      required: false,
+      ui: null,
+      default: null,
+      changeable: true,
+      show_in_list: true,
+      item_fields: {
+        serial: stringField("Serial"),
+        model: stringField("Model"),
+      },
+      item_order: ["serial", "model"],
+    };
+    const rows = rowsFromFields({ equipment });
+    rows[0] = {
+      ...rows[0],
+      definition: { ...equipment, item_fields: { serial: stringField("Serial") } },
+    };
+
+    const payload = buildFieldsPayload(rows, ["equipment"], { equipment });
+
+    expect(payload.equipment).toMatchObject({
+      type: "list",
+      item_fields: { serial: stringField("Serial"), model: null },
+    });
+    expect(payload.equipment).not.toHaveProperty("item_order");
   });
 });
 

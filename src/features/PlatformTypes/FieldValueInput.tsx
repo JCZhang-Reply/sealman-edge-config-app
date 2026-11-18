@@ -1,4 +1,6 @@
 import { components } from "@/generated/edge-administration/types";
+import { Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import Toggle from "./Toggle";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +11,7 @@ const NO_SELECTION = "__none__";
 export type FieldDefinitionLike = Pick<
   components["schemas"]["FieldDefinition"],
   "type" | "ui" | "options" | "validation"
->;
+> & Partial<Pick<components["schemas"]["FieldDefinition"], "item_fields" | "item_order">>;
 type FieldDefinition = components["schemas"]["FieldDefinition"];
 type FieldValidation = NonNullable<FieldDefinitionLike["validation"]>;
 
@@ -25,6 +27,7 @@ export const compactInputClass = inputClass.replace("py-2", "py-1") + " h-8";
 export function formatMetadataValue(value: unknown, definition: Pick<FieldDefinitionLike, "type">): string {
   if (value === null || value === undefined || value === "") return "";
   if (definition.type === "boolean") return value ? "Yes" : "No";
+  if (definition.type === "list") return Array.isArray(value) ? `${value.length} ${value.length === 1 ? "item" : "items"}` : "";
   return String(value);
 }
 
@@ -45,6 +48,23 @@ export function validateFieldValue(label: string, value: unknown, definition: Fi
   }
   if (type === "number" && typeof value !== "number") return `"${label}" must be a number`;
   if (type === "string" && typeof value !== "string") return `"${label}" must be a string`;
+  if (type === "list") {
+    if (!Array.isArray(value) || !value.every((item) => item !== null && typeof item === "object" && !Array.isArray(item))) {
+      return `"${label}" must be a list of objects`;
+    }
+    for (const [index, item] of value.entries()) {
+      for (const [key, field] of Object.entries(definition.item_fields ?? {})) {
+        const itemValue = (item as Record<string, unknown>)[key];
+        const isEmpty = itemValue === null || itemValue === undefined || itemValue === "";
+        if (field.required && isEmpty) return `"${label}" item ${index + 1}: "${field.label}" is required`;
+        if (!isEmpty) {
+          const error = validateFieldValue(`${label} item ${index + 1}: ${field.label}`, itemValue, field);
+          if (error) return error;
+        }
+      }
+    }
+    return null;
+  }
 
   const validation: Partial<FieldValidation> = definition.validation ?? {};
 
@@ -108,7 +128,8 @@ export function validateFields(
 ): string | null {
   for (const [key, definition] of Object.entries(fields)) {
     const value = values[key];
-    const isEmpty = value === null || value === undefined || value === "";
+    const isEmpty = value === null || value === undefined || value === "" ||
+      (definition.type === "list" && Array.isArray(value) && value.length === 0);
     if (definition.required && isEmpty) {
       return `"${definition.label}" is required`;
     }
@@ -140,6 +161,84 @@ interface FieldValueInputProps {
   disabled?: boolean;
 }
 
+function itemFieldEntries(definition: FieldDefinitionLike) {
+  const fields = definition.item_fields ?? {};
+  const order = definition.item_order ?? Object.keys(fields);
+  const orderedKeys = [...order.filter((key) => key in fields), ...Object.keys(fields).filter((key) => !order.includes(key))];
+  return orderedKeys.map((key) => [key, fields[key]] as const);
+}
+
+function defaultListItem(definition: FieldDefinitionLike): Record<string, unknown> {
+  return Object.fromEntries(
+    itemFieldEntries(definition)
+      .filter(([, field]) => field.default !== null && field.default !== undefined)
+      .map(([key, field]) => [key, field.default]),
+  );
+}
+
+function ListFieldValueInput({
+  definition,
+  value,
+  onChange,
+  disabled,
+}: FieldValueInputProps) {
+  const items = Array.isArray(value)
+    ? value.filter((item): item is Record<string, unknown> => item !== null && typeof item === "object" && !Array.isArray(item))
+    : [];
+  const fields = itemFieldEntries(definition);
+
+  const updateItem = (index: number, key: string, nextValue: unknown) => {
+    onChange(items.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: nextValue } : item));
+  };
+
+  return (
+    <div className="space-y-2">
+      {items.map((item, index) => (
+        <div key={typeof item.id === "string" ? item.id : `new-${index}`} className="rounded-md border p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Item {index + 1}</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+              aria-label={`Remove item ${index + 1}`}
+              title={`Remove item ${index + 1}`}
+              disabled={disabled}
+              onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
+            >
+              <Trash2 />
+            </Button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {fields.map(([key, field]) => (
+              <div key={key} className="min-w-0 space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
+                <FieldValueInput
+                  definition={field}
+                  value={item[key] ?? null}
+                  onChange={(next) => updateItem(index, key, next)}
+                  disabled={disabled}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={disabled || fields.length === 0}
+        onClick={() => onChange([...items, defaultListItem(definition)])}
+      >
+        <Plus />
+        Add item
+      </Button>
+    </div>
+  );
+}
+
 /**
  * Renders the appropriate input widget for a value, driven entirely by a
  * FieldDefinition's `type`/`ui`/`options` — the single source of truth for
@@ -148,6 +247,10 @@ interface FieldValueInputProps {
 export default function FieldValueInput({ definition, value, onChange, placeholder, disabled }: FieldValueInputProps) {
   const ui = definition.ui ?? defaultUiFor(definition.type);
   const options = definition.options ?? [];
+
+  if (definition.type === "list") {
+    return <ListFieldValueInput definition={definition} value={value} onChange={onChange} disabled={disabled} />;
+  }
 
   if (ui === "toggle") {
     return <Toggle checked={Boolean(value)} onChange={onChange} disabled={disabled} />;

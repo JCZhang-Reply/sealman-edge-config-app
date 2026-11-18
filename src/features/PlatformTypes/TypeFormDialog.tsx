@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { validateFieldValue } from "./FieldValueInput";
 import FieldsEditor, {
   Field,
   FieldDefinition,
+  FieldDefinitionPatch,
   FieldRow,
   buildFieldsPayload,
   buildMappingPayload,
@@ -14,7 +15,6 @@ import FieldsEditor, {
   rowsFromFields,
 } from "./FieldsEditor";
 import type { RoleOption } from "./typeRoles";
-import FieldInfoTooltip from "./FieldInfoTooltip";
 
 // Radix Select can't hold an empty-string item, so "no browse action" is represented by this sentinel.
 const NO_BROWSER_KIND = "__none__";
@@ -36,7 +36,7 @@ export interface TypeRecord {
 export interface TypeFormResult {
   label: string;
   description: string | null;
-  fields: Record<string, FieldDefinition | null>;
+  fields: Record<string, FieldDefinitionPatch | null>;
   browser_kind: string | null;
   /** The type's {field_key: role} mapping, or null for types without roles (device types). */
   mapping: Record<string, string> | null;
@@ -67,9 +67,45 @@ interface TypeFormDialogProps {
   /** When set, each field row gets a "Show in list" toggle controlling whether its value appears
    * in the corresponding device or endpoint list. */
   supportsListVisibility?: boolean;
+  /** Enables list-of-objects fields, supported only by endpoint types. */
+  supportsListFields?: boolean;
 }
 
-export default function TypeFormDialog({
+function definitionError(key: string, definition: FieldDefinition): string | null {
+  const ui = definition.ui;
+  if ((ui === "select" || ui === "radio") && (definition.options ?? []).length === 0) {
+    return `Field "${key}" needs at least one option`;
+  }
+  const validation = definition.validation;
+  if (validation?.pattern) {
+    try {
+      new RegExp(validation.pattern);
+    } catch {
+      return `Field "${key}" has an invalid regex pattern`;
+    }
+  }
+  if (validation?.min_length != null && validation?.max_length != null && validation.min_length > validation.max_length) {
+    return `Field "${key}": min length cannot be greater than max length`;
+  }
+  if (validation?.minimum != null && validation?.maximum != null && validation.minimum > validation.maximum) {
+    return `Field "${key}": minimum cannot be greater than maximum`;
+  }
+  if (ui === "slider" && (validation?.minimum == null || validation?.maximum == null)) {
+    return `Field "${key}": a slider needs both a minimum and a maximum`;
+  }
+  if (definition.default != null) {
+    const error = validateFieldValue(definition.label || key, definition.default, definition);
+    if (error) return `Field "${key}" default value: ${error}`;
+  }
+  return null;
+}
+
+export default function TypeFormDialog(props: TypeFormDialogProps) {
+  if (!props.isOpen) return null;
+  return <TypeFormDialogContent key={props.initial?.type_id ?? `new-${props.singularLabel}`} {...props} />;
+}
+
+function TypeFormDialogContent({
   isOpen,
   onClose,
   onSubmit,
@@ -82,30 +118,22 @@ export default function TypeFormDialog({
   defaultMapping,
   roleOptions,
   supportsListVisibility,
+  supportsListFields,
 }: TypeFormDialogProps) {
   const isEdit = Boolean(initial);
 
-  const [label, setLabel] = useState("");
-  const [description, setDescription] = useState("");
-  const [browserKind, setBrowserKind] = useState("");
-  const [rows, setRows] = useState<FieldRow[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    setLabel(initial?.label ?? "");
-    setDescription(initial?.description ?? "");
-    setBrowserKind(initial?.browser_kind ?? "");
-    if (initial) {
-      setRows(rowsFromFields(initial.fields, initial.mapping ?? {}));
-    } else if (defaultFields && Object.keys(defaultFields).length > 0) {
-      setRows(rowsFromFields(defaultFields, defaultMapping ?? {}));
-    } else {
-      // No pre-filled blank row - the user presses "Add field" to start defining one.
-      setRows([]);
+  const [label, setLabel] = useState(initial?.label ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [browserKind, setBrowserKind] = useState(initial?.browser_kind ?? "");
+  const [rows, setRows] = useState<FieldRow[]>(() => {
+    if (initial) return rowsFromFields(initial.fields, initial.mapping ?? {});
+    if (defaultFields && Object.keys(defaultFields).length > 0) {
+      return rowsFromFields(defaultFields, defaultMapping ?? {});
     }
-    setError(null);
-  }, [isOpen, initial, defaultFields, defaultMapping]);
+    return [];
+  });
+  const [nestedErrors, setNestedErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -124,6 +152,12 @@ export default function TypeFormDialog({
       return;
     }
 
+    const nestedError = rows.find((row) => row.definition.type === "list" && nestedErrors[row.id]);
+    if (nestedError) {
+      setError(nestedErrors[nestedError.id]);
+      return;
+    }
+
     for (const row of rows) {
       if (!row.key.trim()) {
         setError("Every field needs a key");
@@ -133,48 +167,38 @@ export default function TypeFormDialog({
         setError(`Field "${row.key.trim()}" needs a label`);
         return;
       }
-      const ui = row.definition.ui;
-      if ((ui === "select" || ui === "radio") && (row.definition.options ?? []).length === 0) {
-        setError(`Field "${row.key.trim()}" needs at least one option`);
-        return;
-      }
-
-      const validation = row.definition.validation;
-      if (validation?.pattern) {
-        try {
-          new RegExp(validation.pattern);
-        } catch {
-          setError(`Field "${row.key.trim()}" has an invalid regex pattern`);
+      if (row.definition.type === "list") {
+        const itemFields = row.definition.item_fields ?? {};
+        if (Object.keys(itemFields).length === 0) {
+          setError(`Field "${row.key.trim()}" needs at least one item field`);
           return;
         }
-      }
-      if (
-        validation?.min_length != null &&
-        validation?.max_length != null &&
-        validation.min_length > validation.max_length
-      ) {
-        setError(`Field "${row.key.trim()}": min length cannot be greater than max length`);
-        return;
-      }
-      if (validation?.minimum != null && validation?.maximum != null && validation.minimum > validation.maximum) {
-        setError(`Field "${row.key.trim()}": minimum cannot be greater than maximum`);
-        return;
-      }
-      if (ui === "slider" && (validation?.minimum == null || validation?.maximum == null)) {
-        setError(`Field "${row.key.trim()}": a slider needs both a minimum and a maximum`);
-        return;
-      }
-      if (row.definition.default != null) {
-        const defaultError = validateFieldValue(row.definition.label || row.key.trim(), row.definition.default, row.definition);
-        if (defaultError) {
-          setError(`Field "${row.key.trim()}" default value: ${defaultError}`);
+        for (const [itemKey, itemDefinition] of Object.entries(itemFields)) {
+          if (itemKey === "id") {
+            setError(`Field "${row.key.trim()}" cannot use "id" as an item field key`);
+            return;
+          }
+          if (!itemDefinition.label.trim()) {
+            setError(`Item field "${itemKey}" in "${row.key.trim()}" needs a label`);
+            return;
+          }
+          const itemError = definitionError(`${row.key.trim()}.${itemKey}`, itemDefinition);
+          if (itemError) {
+            setError(itemError);
+            return;
+          }
+        }
+      } else {
+        const fieldError = definitionError(row.key.trim(), row.definition);
+        if (fieldError) {
+          setError(fieldError);
           return;
         }
       }
     }
 
     const originalKeys = Object.keys(initial?.fields ?? {});
-    const fields = buildFieldsPayload(rows, originalKeys);
+    const fields = buildFieldsPayload(rows, originalKeys, initial?.fields ?? {});
 
     try {
       await onSubmit({
@@ -259,6 +283,13 @@ export default function TypeFormDialog({
               duplicateKeys={duplicateKeys}
               showListVisibility={supportsListVisibility}
               roleOptions={roleOptions}
+              supportsListFields={supportsListFields}
+              onNestedErrorsChange={(id, nestedError) => setNestedErrors((previous) => {
+                const next = { ...previous };
+                if (nestedError) next[id] = nestedError;
+                else delete next[id];
+                return next;
+              })}
             />
           </div>
 

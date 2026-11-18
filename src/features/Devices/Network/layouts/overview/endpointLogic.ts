@@ -41,7 +41,7 @@ export function useEndpointDisplay(endpoint: MappedEndpoint): EndpointDisplay {
   // decides this, not a separate settings page.
   const extraEndpointInfo = Object.entries(endpoint.endpoint_data ?? {})
     .filter(([key]) => !shownInTitle.has(key))
-    .filter(([, resolved]) => resolved.field?.show_in_list)
+    .filter(([, resolved]) => resolved.field?.show_in_list && resolved.field.type !== "list")
     .map(([, resolved]) => (resolved.field ? formatMetadataValue(resolved.value, resolved.field) : null))
     .filter((value): value is string => Boolean(value));
 

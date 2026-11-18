@@ -5,6 +5,7 @@ import EndpointDetailsPage from "../EndpointDetailsPage";
 const mocks = vi.hoisted(() => ({
   endpoint: undefined as unknown,
   hasPermission: true,
+  endpointTypeFields: {} as Record<string, unknown>,
 }));
 
 const endpointFixture = {
@@ -36,7 +37,7 @@ vi.mock("@/generated/edge-administration/hooks/endpoints/useGetEndpoint", () => 
   default: () => ({ data: mocks.endpoint, isLoading: false, isError: false, refetch: vi.fn() }),
 }));
 vi.mock("@/generated/edge-administration/hooks/endpoint_types/useGetEndpointTypes", () => ({
-  default: () => ({ data: [{ type_id: "t1", label: "Type One", description: null, fields: {}, mapping: {} }] }),
+  default: () => ({ data: [{ type_id: "t1", label: "Type One", description: null, fields: mocks.endpointTypeFields, mapping: {} }] }),
 }));
 vi.mock("@/generated/edge-administration/hooks/services/useGetServices", () => ({
   default: () => ({ data: [], refetch: vi.fn() }),
@@ -58,6 +59,7 @@ describe("EndpointDetailsPage endpoint.details slot", () => {
   beforeEach(() => {
     mocks.endpoint = endpointFixture;
     mocks.hasPermission = true;
+    mocks.endpointTypeFields = {};
   });
 
   it("renders the endpoint section outlet with ids and edit rights for writers", () => {
@@ -80,5 +82,36 @@ describe("EndpointDetailsPage endpoint.details slot", () => {
     mocks.hasPermission = false;
     renderPage();
     expect(JSON.parse(screen.getByTestId("slot").textContent!).context.canEdit).toBe(false);
+  });
+
+  it("shows list item fields in the endpoint definition and renders its row editor", () => {
+    mocks.endpointTypeFields = {
+      equipment: {
+        type: "list",
+        label: "Equipment",
+        required: false,
+        changeable: true,
+        show_in_list: true,
+        item_fields: {
+          serial: {
+            type: "string",
+            label: "Serial Number",
+            required: true,
+            ui: "input",
+            changeable: true,
+            show_in_list: true,
+          },
+        },
+        item_order: ["serial"],
+      },
+    };
+
+    renderPage();
+
+    expect(screen.getByText("Each item contains")).toBeInTheDocument();
+    expect(screen.getByText("Each item contains").parentElement?.parentElement).toHaveTextContent(
+      "Serial Number (serial) · string · required",
+    );
+    expect(screen.getByRole("button", { name: "Add item" })).toBeInTheDocument();
   });
 });

@@ -84,6 +84,133 @@ describe("EndpointAccordionItem", () => {
     expect(screen.getAllByText("Press 1")).toHaveLength(2);
   });
 
+  it("shows and lets users edit an empty list field on a scan-assigned endpoint", async () => {
+    const user = userEvent.setup();
+    typesRef.current = [{
+      type_id: "plc",
+      label: "PLC",
+      description: null,
+      mapping: {},
+      fields: {
+        equipments: {
+          type: "list",
+          label: "Equipments",
+          required: false,
+          ui: null,
+          default: null,
+          changeable: true,
+          show_in_list: true,
+          item_fields: {
+            serial: {
+              type: "string",
+              label: "Serial Number",
+              required: true,
+              ui: "input",
+              default: null,
+              changeable: true,
+              show_in_list: true,
+            },
+          },
+        },
+      },
+    }];
+
+    renderItem({
+      endpoint_id: "e-list",
+      type_id: "plc",
+      type_label: "PLC",
+      ip: "10.0.0.1",
+      status: "online",
+      source: "configured",
+      ports: [],
+      endpoint_data: {},
+    });
+
+    await user.click(screen.getByRole("button", { name: "Endpoint details" }));
+    expect(await screen.findByText("Equipments")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Edit endpoint details" }));
+    expect(screen.getByRole("button", { name: "Add item" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    expect(screen.getByText("Serial Number")).toBeInTheDocument();
+  });
+
+  it("shows list item values instead of an item count", async () => {
+    const user = userEvent.setup();
+    const equipmentField = {
+      type: "list",
+      label: "Equipments",
+      required: false,
+      ui: null,
+      default: null,
+      changeable: true,
+      show_in_list: true,
+      item_fields: {
+        serial: { type: "string", label: "Serial Number", required: true, ui: "input", changeable: true, show_in_list: true },
+        model: { type: "string", label: "Model", required: false, ui: "input", changeable: true, show_in_list: true },
+      },
+      item_order: ["serial", "model"],
+    };
+    typesRef.current = [{
+      type_id: "plc",
+      label: "PLC",
+      description: null,
+      fields: { equipments: equipmentField },
+      mapping: {},
+    }];
+
+    renderItem({
+      endpoint_id: "e-list-values",
+      type_id: "plc",
+      type_label: "PLC",
+      ip: "10.0.0.1",
+      status: "online",
+      source: "configured",
+      ports: [],
+      endpoint_data: {
+        equipments: {
+          value: [{ id: "item-1", serial: "SN-42", model: "Panel X" }],
+          field: equipmentField,
+        },
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Endpoint details" }));
+
+    expect(await screen.findByText("Serial Number:")).toBeInTheDocument();
+    expect(screen.getByText("SN-42")).toBeInTheDocument();
+    expect(screen.getByText("Model:")).toBeInTheDocument();
+    expect(screen.getByText("Panel X")).toBeInTheDocument();
+    expect(screen.queryByText("1 item")).not.toBeInTheDocument();
+  });
+
+  it("shows a mapped IP field only in the dedicated IP address row", async () => {
+    const user = userEvent.setup();
+    typesRef.current = [{
+      type_id: "plc",
+      label: "PLC",
+      description: null,
+      fields: { addr: { ...STRING, label: "Address" } },
+      mapping: { addr: "ip" },
+    }];
+
+    renderItem({
+      endpoint_id: "e-ip-detail",
+      type_id: "plc",
+      type_label: "PLC",
+      ip: "10.0.0.8",
+      status: "online",
+      source: "configured",
+      ports: [],
+      endpoint_data: { addr: { value: "10.0.0.8", field: { ...STRING, label: "Address" } } },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Endpoint details" }));
+
+    expect(screen.getByText("IP address")).toBeInTheDocument();
+    expect(screen.queryByText("Address")).not.toBeInTheDocument();
+    expect(screen.getAllByText("10.0.0.8", { exact: true })).toHaveLength(1);
+  });
+
   it("edits and saves endpoint fields inline", async () => {
     const user = userEvent.setup();
     renderItem({
