@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 import { DEFAULT_THEME_ID, type ThemeVariables } from "./themes";
 
 // Must match index.html.
-export const DEFAULT_APP_TITLE = "EdgeConfig App";
+export const DEFAULT_APP_TITLE = "GEA IIoT Platform";
 export const DEFAULT_FAVICON = "/sealman.ico";
 
 export interface Branding {

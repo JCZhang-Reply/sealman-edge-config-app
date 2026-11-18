@@ -92,7 +92,7 @@ export default function DeviceManageDialog({ canCreate }: { canCreate: boolean }
 
   return (
     <>
-      <Button onClick={openDialog}>Add Device</Button>
+      <Button onClick={openDialog} disabled>Add Device</Button>
 
       <Dialog open={open} onOpenChange={(next) => !next && closeDialog()}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

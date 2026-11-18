@@ -14,6 +14,7 @@ import FieldsEditor, {
   rowsFromFields,
 } from "./FieldsEditor";
 import type { RoleOption } from "./typeRoles";
+import FieldInfoTooltip from "./FieldInfoTooltip";
 
 // Radix Select can't hold an empty-string item, so "no browse action" is represented by this sentinel.
 const NO_BROWSER_KIND = "__none__";
@@ -201,7 +202,7 @@ export default function TypeFormDialog({
 
         <div className="px-6 py-4 space-y-5 overflow-y-auto">
           {isEdit && (
-            <Field label="Type ID">
+            <Field label="Type ID" info="The system-generated identifier for this type. It is read-only and is used internally to reference the type.">
               <Input
                 type="text"
                 value={(initial as TypeRecord).type_id}
@@ -211,7 +212,7 @@ export default function TypeFormDialog({
             </Field>
           )}
 
-          <Field label="Label *">
+          <Field label="Label *" info="The human-readable name displayed when users select or view this type. Enter a concise name.">
             <Input
               type="text"
               placeholder="Human readable name"
@@ -220,7 +221,7 @@ export default function TypeFormDialog({
             />
           </Field>
 
-          <Field label="Description">
+          <Field label="Description" info="Optional summary explaining what this type represents. It is displayed as supporting information in the type list.">
             <Input
               type="text"
               placeholder="Optional description"
@@ -230,7 +231,7 @@ export default function TypeFormDialog({
           </Field>
 
           {browserKindOptions && (
-            <Field label="Browse Action">
+            <Field label="Browse Action" info="Select the registered browser action used to open or inspect instances of this type. Choose None when no browse action applies.">
               <Select
                 value={browserKind || NO_BROWSER_KIND}
                 onValueChange={(v) => setBrowserKind(v === NO_BROWSER_KIND ? "" : v)}
