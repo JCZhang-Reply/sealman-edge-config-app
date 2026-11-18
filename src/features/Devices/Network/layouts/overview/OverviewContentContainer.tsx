@@ -513,7 +513,6 @@ function OverviewContent({ deviceId, contextKey, scanEnabled, onRetry }: {
         <>
           <div>
             <DeviceGatewayCard deviceId={deviceId} />
-            <div className="ml-10 h-6 w-0.5 bg-blue-600/30" aria-hidden="true" />
           </div>
           <DiscoveredEndpointsCard
             endpoints={discovered}
@@ -542,7 +541,6 @@ function OverviewContent({ deviceId, contextKey, scanEnabled, onRetry }: {
               </p>
             </div>
             <EndpointActions
-              deviceId={deviceId}
               onScan={() => setScanDialogOpen(true)}
               isScanning={isScanning}
               scanDisabled={scanDenied}

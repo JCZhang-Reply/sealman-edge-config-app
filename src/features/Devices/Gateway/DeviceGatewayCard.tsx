@@ -1,12 +1,11 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { toast } from "react-toastify";
-import { Cpu, Pencil } from "lucide-react";
+import { ChevronDown, Cpu, Pencil } from "lucide-react";
 import { WaterLoader } from "@/components/ui/water-loader";
 import { Button } from "@/components/ui/button";
-import Badge from "@/components/Typography/Badge";
-import { formatMetadataValue, validateFields } from "@/features/PlatformTypes/FieldValueInput";
-import TypeFieldsForm from "@/features/Devices/Network/layouts/overview/TypeFieldsForm";
-import CustomFieldsEditor from "@/features/Devices/Network/layouts/overview/CustomFieldsEditor";
+import { validateFields } from "@/features/PlatformTypes/FieldValueInput";
+import InlineMetadataField from "@/features/Devices/Network/layouts/overview/InlineMetadataField";
+import InlineCustomFieldAdder from "@/features/Devices/Network/layouts/overview/InlineCustomFieldAdder";
 import { withPermissionRequiredTooltip } from "@/features/authorization/permissions/withPermissionRequiredTooltip";
 import { PERMISSION_KEYS } from "@/features/authorization/permissions/permission-keys";
 import useGetDeviceMetadata from "@/generated/edge-administration/hooks/device_metadata/useGetDeviceMetadata";
@@ -28,6 +27,7 @@ export default function DeviceGatewayCard({ deviceId }: { deviceId: string }) {
   const { query: patchMetadata, isPending: isPatchingMetadata } = usePatchDeviceMetadata();
 
   const [editing, setEditing] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   // Only what the user changed; the stored values underneath stay untouched until saving.
   const [edits, setEdits] = useState<Record<string, unknown>>({});
   const [deletedKeys, setDeletedKeys] = useState<Set<string>>(new Set());
@@ -52,7 +52,14 @@ export default function DeviceGatewayCard({ deviceId }: { deviceId: string }) {
   const startEditing = () => {
     setEdits({});
     setDeletedKeys(new Set());
+    setDetailsOpen(true);
     setEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setEdits({});
+    setDeletedKeys(new Set());
+    setEditing(false);
   };
 
   const setValue = (key: string, value: unknown) => {
@@ -101,39 +108,57 @@ export default function DeviceGatewayCard({ deviceId }: { deviceId: string }) {
     }
   };
 
-  const viewEntries: [string, ReactNode][] = [];
-  if (metadata) {
-    viewEntries.push(["Device Type", <Badge>{currentType?.label ?? metadata.typeId}</Badge>]);
-    Object.entries(metadata.deviceMetadata)
-      .map(([key, entry]) => [entry.field?.label ?? key, formatMetadataValue(entry.value, entry.field ?? { type: "string" })] as const)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .forEach(([label, value]) => viewEntries.push([label, value]));
-  }
+  const detailRows = metadata
+    ? [
+        { key: "__device_type", label: "Device Type", value: currentType?.label ?? metadata.typeId, fixed: true },
+        ...Object.entries(fields)
+          .map(([key, definition]) => ({ key, label: definition.label, value: merged[key] ?? null, definition }))
+          .sort((a, b) => a.label.localeCompare(b.label)),
+        ...Object.entries(merged)
+          .filter(([key]) => !(key in fields))
+          .map(([key, value]) => ({ key, label: metadata.deviceMetadata[key]?.field?.label ?? key, value, definition: metadata.deviceMetadata[key]?.field }))
+          .sort((a, b) => a.label.localeCompare(b.label)),
+      ]
+    : [];
 
   return (
-    <section className="overflow-hidden rounded-xl border-2 border-l-8 border-blue-600/30 border-l-blue-600 bg-background shadow-md">
-      <header className="flex items-start justify-between gap-4 border-b bg-blue-50/60 px-6 py-5">
-        <div className="flex items-center gap-4">
-          <div className="rounded-xl bg-blue-600 p-3 text-white shadow-sm">
-            <Cpu className="h-7 w-7" aria-hidden="true" />
+    <section className="bg-white">
+      <header className="flex min-h-14 items-center gap-3 px-3 py-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded bg-[#0b3f8f] text-white">
+            <Cpu className="h-5 w-5" aria-hidden="true" />
           </div>
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-blue-700">Gateway</p>
-            <h2 className="text-2xl font-semibold leading-none tracking-tight">{deviceId}</h2>
-            <p className="text-sm text-muted-foreground">The endpoints and services of this device are connected through it.</p>
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#0b3f8f]">Device · Edge device</p>
+            <h2 className="truncate text-base font-semibold leading-5">{deviceId}</h2>
           </div>
         </div>
-        {metadata &&
-          (editing ? (
-            <div className="flex shrink-0 items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setEditing(false)} disabled={isSaving}>
-                Cancel
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save"}
-              </Button>
-            </div>
-          ) : (
+      </header>
+
+      <div className="flex min-h-10 items-center justify-between gap-3 border-t border-slate-100 px-3 py-1.5">
+        <button
+          type="button"
+          className="flex items-center gap-2 py-1 text-left text-[10px] font-semibold uppercase tracking-wider text-blue-700"
+          aria-expanded={detailsOpen || editing}
+          aria-controls="gateway-details"
+          disabled={editing}
+          onClick={() => setDetailsOpen((open) => !open)}
+        >
+          <ChevronDown className={`h-4 w-4 transition-transform ${detailsOpen || editing ? "" : "-rotate-90"}`} />
+          Device details
+        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {metadata && editing && (
+            <Button variant="outline" size="sm" onClick={cancelEditing} disabled={isSaving}>
+              Cancel
+            </Button>
+          )}
+          {metadata && editing && (
+            <Button size="sm" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+          )}
+          {metadata && !editing && (
             <GuardedButton
               deviceId={deviceId}
               permissionKey={PERMISSION_KEYS.DEVICE_METADATA_WRITE}
@@ -143,10 +168,11 @@ export default function DeviceGatewayCard({ deviceId }: { deviceId: string }) {
             >
               <Pencil /> Edit
             </GuardedButton>
-          ))}
-      </header>
+          )}
+        </div>
+      </div>
 
-      <div className="p-6">
+      <div className={detailsOpen || editing || metadataQuery.isLoading || metadataQuery.isError ? "px-3 pb-3" : "px-3"}>
         {metadataQuery.isLoading && (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <WaterLoader /> Loading gateway...
@@ -154,41 +180,22 @@ export default function DeviceGatewayCard({ deviceId }: { deviceId: string }) {
         )}
         {metadataQuery.isError && <p className="text-sm text-destructive">Failed to load the gateway data.</p>}
 
-        {metadata && !editing && (
-          <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
-            {viewEntries.map(([label, value]) => (
-              <div key={label} className="min-w-0 space-y-0.5">
-                <dt className="text-xs text-muted-foreground">{label}</dt>
-                <dd className="truncate text-sm font-medium">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-
-        {metadata && editing && (
-          <div className="max-w-2xl space-y-6">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">Device Type</p>
-              <Badge>{currentType?.label ?? metadata.typeId}</Badge>
-            </div>
-
-            {Object.keys(fields).length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-muted-foreground">Metadata</h3>
-                <TypeFieldsForm
-                  fields={fields}
-                  values={formValues}
-                  onChange={setValue}
-                  onDelete={deleteValue}
-                  lockSavedValues={false}
+        {metadata && (detailsOpen || editing) && (
+          <div id="gateway-details" className="border-t border-slate-100 py-3">
+            <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+              {detailRows.map((row) => (
+                <InlineMetadataField
+                  key={row.key}
+                  label={row.label}
+                  value={row.value}
+                  definition={row.definition}
+                  editing={editing && !row.fixed}
+                  onChange={(value) => setValue(row.key, value)}
+                  onDelete={row.fixed || row.definition?.required ? undefined : () => deleteValue(row.key)}
                 />
-              </div>
-            )}
-
-            <div className="space-y-2 border-t pt-4">
-              <h3 className="text-xs font-semibold text-muted-foreground">Custom Fields</h3>
-              <CustomFieldsEditor customValues={customValues} onChange={setValue} onDelete={deleteValue} onAdd={setValue} />
-            </div>
+              ))}
+            </dl>
+            {editing && <InlineCustomFieldAdder existingKeys={Object.keys(merged)} onAdd={setValue} />}
           </div>
         )}
       </div>

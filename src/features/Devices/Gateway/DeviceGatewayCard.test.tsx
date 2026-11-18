@@ -73,7 +73,7 @@ describe("gateway metadata editing", () => {
   });
 
   it("preserves deletion of optional metadata fields", async () => {
-    fireEvent.click(screen.getByTitle('Clear "Serial"'));
+    fireEvent.click(screen.getByRole("button", { name: "Remove Serial" }));
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(mocks.patchMetadata).toHaveBeenCalledWith({
@@ -90,5 +90,24 @@ describe("gateway metadata editing", () => {
     expect(mocks.notify).toHaveBeenCalledWith('"Name" is required');
     expect(mocks.patchMetadata).not.toHaveBeenCalled();
     expect(mocks.patchDeviceType).not.toHaveBeenCalled();
+  });
+
+  it("reveals device metadata from the details disclosure", () => {
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    const details = screen.getByRole("button", { name: /Device details/ });
+    expect(details).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(details);
+    expect(details).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(details);
+    expect(details).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Saved serial")).toBeInTheDocument();
+  });
+
+  it("keeps the gateway detail grid unchanged when switching to edit mode", () => {
+    const editingGrid = document.querySelectorAll("#gateway-details dl > div").length;
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(document.querySelectorAll("#gateway-details dl > div")).toHaveLength(editingGrid);
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(document.querySelectorAll("#gateway-details dl > div")).toHaveLength(editingGrid);
   });
 });

@@ -9,6 +9,8 @@ type DeviceDetailConnectionStatus = components["schemas"]["DeviceDetailConnectio
 interface DeviceHeaderProps {
   deviceId?: string;
   connectionStatus?: DeviceDetailConnectionStatus;
+  customer?: unknown;
+  connectedMachines?: string[];
   isLoading: boolean;
   isError: boolean;
   error?: unknown;
@@ -30,7 +32,7 @@ function StatusIcon({ label, state, icon: Icon }: StatusIconProps) {
         <span
           role="img"
           aria-label={text}
-          className={`flex h-8 w-8 items-center justify-center rounded-full border ${
+          className={`flex h-7 w-7 items-center justify-center rounded border ${
             connected
               ? "border-green-200 bg-green-50 text-green-600"
               : "border-red-200 bg-red-50 text-red-600"
@@ -101,40 +103,48 @@ function StatusOrb({ state }: { state: HeaderState }) {
   );
 }
 
-export default function DeviceHeader({ deviceId, connectionStatus, isLoading, isError, error }: DeviceHeaderProps) {
+export default function DeviceHeader({ deviceId, connectionStatus, customer, connectedMachines = [], isLoading, isError, error }: DeviceHeaderProps) {
   const state = overallState(connectionStatus);
   const style = STATE_STYLE[state];
+  const customerText = customer == null || customer === "" ? "-" : String(customer);
+  const connectedText = connectedMachines.length ? connectedMachines.join(", ") : "-";
 
   return (
-    <div className="relative flex items-center gap-4 overflow-hidden rounded-lg border bg-white px-5 py-3">
-      <div className={`pointer-events-none absolute inset-0 bg-linear-to-r ${style.tint} to-transparent transition-colors duration-700`} />
-      {state === "online" && (
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-linear-to-r from-transparent to-transparent motion-safe:animate-sweep via-green-300/30" />
-      )}
-      <span className={`absolute inset-y-0 left-0 w-1 ${style.dot} transition-colors duration-700`} />
-
-      <div className="relative min-w-0 flex-1">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Device</p>
-        <div className="flex items-center gap-3">
-          <h1 className="truncate text-2xl font-semibold leading-tight tracking-tight">{deviceId}</h1>
+    <div className={`flex flex-wrap items-center justify-between gap-x-6 gap-y-3 overflow-hidden rounded-md border border-l-4 bg-white px-4 py-3 ${
+      state === "online" ? "border-l-green-600" : state === "offline" ? "border-l-red-600" : state === "partial" ? "border-l-amber-500" : "border-l-slate-400"
+    }`}>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Device</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="truncate text-lg font-semibold leading-6">{deviceId}</h1>
           {!isLoading && (
             <span
-              className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors duration-700 ${style.chip}`}
+              className={`inline-flex shrink-0 items-center gap-2 rounded border px-2.5 py-1 text-[11px] font-semibold ${style.chip}`}
             >
               <StatusOrb state={state} />
               {style.label}
             </span>
           )}
         </div>
+        <dl className="mt-2 flex flex-wrap gap-x-7 gap-y-1 text-xs">
+          <div className="flex items-baseline gap-1.5">
+            <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Customer</dt>
+            <dd className="font-medium text-slate-800">{customerText}</dd>
+          </div>
+          <div className="flex min-w-0 items-baseline gap-1.5">
+            <dt className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Connected machines</dt>
+            <dd className="min-w-0 font-medium text-slate-800">{connectedText}</dd>
+          </div>
+        </dl>
       </div>
 
-      {isLoading && <div className="relative h-8 w-40 animate-pulse rounded-full bg-slate-200" />}
+      {isLoading && <div className="h-7 w-32 animate-pulse rounded bg-slate-200" />}
 
-      {isError && <p className="relative text-sm text-destructive">Could not load the device: {getErrorMessage(error)}</p>}
+      {isError && <p className="text-sm text-destructive">Could not load the device: {getErrorMessage(error)}</p>}
 
       {connectionStatus && (
         <TooltipProvider delayDuration={100}>
-          <div className="relative flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <StatusIcon label="IoT-Edge Runtime" state={connectionStatus.iotEdgeRuntime} icon={Cpu} />
             <StatusIcon label="IoT-Hub" state={connectionStatus.iotHub} icon={Cloud} />
             <StatusIcon label="Smart-EMS" state={connectionStatus.sems} icon={Router} />

@@ -24,6 +24,9 @@ import RemoteAccess from "./Vpn/RemoteAccess";
 import DevicePanel from "./DevicePanel";
 import { LoadingState } from "@/components/ui/page-state";
 import useGetDeviceMetadata from "@/generated/edge-administration/hooks/device_metadata/useGetDeviceMetadata";
+import useGetEndpoints from "@/generated/edge-administration/hooks/endpoints/useGetEndpoints";
+import useGetEndpointTypes from "@/generated/edge-administration/hooks/endpoint_types/useGetEndpointTypes";
+import { endpointTitle, roleFieldKey } from "./Network/layouts/overview/endpointDisplay";
 import RoutedExtensionPanel from "@/features/Extensions/outlets/RoutedExtensionPanel";
 import { useNavContributions } from "@/features/Extensions/outlets/useNavContributions";
 import { useOutletUser } from "@/features/Extensions/outlets/useOutletUser";
@@ -41,6 +44,18 @@ export default function DeviceDetail() {
 
   const user = useOutletUser();
   const metadata = useGetDeviceMetadata(deviceId ?? "");
+  const endpoints = useGetEndpoints({ deviceId: deviceId ?? "" });
+  const endpointTypes = useGetEndpointTypes();
+  const connectedMachines = (endpoints.data ?? []).map((endpoint) => {
+    const type = endpointTypes.data?.find((item) => item.type_id === endpoint.type_id);
+    const nameKey = roleFieldKey(type?.mapping, "name");
+    const ipKey = roleFieldKey(type?.mapping, "ip");
+    return endpointTitle({
+      typeLabel: endpoint.type_label,
+      name: nameKey ? endpoint.endpoint_data[nameKey]?.value : undefined,
+      ip: ipKey ? endpoint.endpoint_data[ipKey]?.value : undefined,
+    });
+  });
   const deviceTypeId = metadata.data?.typeId ?? "";
   const { hasPermission: canEdit } = usePermissions({ deviceId, permissionKey: PERMISSION_KEYS.DEVICE_METADATA_WRITE });
   const tabContext = { user, deviceId: deviceId ?? "", deviceTypeId, canEdit };
@@ -70,6 +85,8 @@ export default function DeviceDetail() {
       <DeviceHeader
         deviceId={deviceId}
         connectionStatus={device.data?.connectionStatus}
+        customer={metadata.data?.deviceMetadata.customer?.value}
+        connectedMachines={connectedMachines}
         isLoading={device.isLoading}
         isError={device.isError}
         error={device.error}
@@ -136,11 +153,7 @@ export default function DeviceDetail() {
             />
             <Route
               path="assets"
-              element={
-                <Panel>
-                  <NetworkPage deviceId={deviceId ?? "no device ID in the path"} />
-                </Panel>
-              }
+              element={<NetworkPage deviceId={deviceId ?? "no device ID in the path"} />}
             />
             <Route path="remote-access/*" element={<RemoteAccess />} />
             <Route

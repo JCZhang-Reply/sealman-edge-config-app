@@ -22,15 +22,15 @@ interface props {
 /** "Scan Network" and "Add Endpoint" - the same actions in the list and the canvas view. */
 export default function EndpointActions({ deviceId, onScan, isScanning, scanDisabled = false, scanAvailable = true, onAddEndpoint, leading }: props) {
   return (
-    <div className="flex items-center gap-2 shrink-0">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       {leading}
       {scanAvailable && (
-        <Button variant="outline" onClick={onScan} disabled={isScanning || scanDisabled}>
+        <Button variant="outline" className="h-8 rounded-[5px] px-3 text-xs" onClick={onScan} disabled={isScanning || scanDisabled}>
           {isScanning ? <WaterLoader /> : <Search />}
           {isScanning ? "Scanning..." : "Scan Network"}
         </Button>
       )}
-      <GuardedButton deviceId={deviceId} permissionKey={PERMISSION_KEYS.DEVICE_ENDPOINT_WRITE} variant="outline" onClick={onAddEndpoint}>
+      <GuardedButton deviceId={deviceId} permissionKey={PERMISSION_KEYS.DEVICE_ENDPOINT_WRITE} className="h-8 rounded-[5px] px-3 text-xs" onClick={onAddEndpoint}>
         <Plus /> Add Endpoint
       </GuardedButton>
     </div>

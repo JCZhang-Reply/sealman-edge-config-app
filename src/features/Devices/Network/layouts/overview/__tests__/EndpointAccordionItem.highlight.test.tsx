@@ -7,6 +7,21 @@ import EndpointAccordionItem from "../EndpointAccordionItem";
 vi.mock("@/generated/edge-administration/hooks/endpoint_types/useGetEndpointTypes", () => ({
   default: () => ({ data: [{ type_id: "plc", label: "PLC", description: null, fields: {}, mapping: {} }] }),
 }));
+vi.mock("@/generated/edge-administration/hooks/service_types/useGetServiceTypes", () => ({
+  default: () => ({ data: [] }),
+}));
+vi.mock("@/generated/edge-administration/hooks/endpoints/useUpdateEndpoint", () => ({
+  useUpdateEndpoint: () => ({ updateEndpoint: vi.fn(), isPending: false }),
+}));
+vi.mock("@/generated/edge-administration/hooks/services/useUpdateService", () => ({
+  useUpdateService: () => ({ updateService: vi.fn(), isPending: false }),
+}));
+vi.mock("@/generated/edge-administration/hooks/endpoints/useDeleteEndpoint", () => ({
+  useDeleteEndpoint: () => ({ deleteEndpoint: vi.fn(), isPending: false }),
+}));
+vi.mock("@/generated/edge-administration/hooks/services/useDeleteService", () => ({
+  useDeleteService: () => ({ deleteService: vi.fn(), isPending: false }),
+}));
 vi.mock("@/features/authorization/permissions/use-permissions", () => ({
   usePermissions: () => ({ hasPermission: true }),
 }));
